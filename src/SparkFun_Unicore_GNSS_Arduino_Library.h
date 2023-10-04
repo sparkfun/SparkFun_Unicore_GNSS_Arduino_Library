@@ -1,17 +1,10 @@
 /*
-  This is a library to read/write to external I2C EEPROMs.
-  It uses the same template system found in the Arduino
-  EEPROM library so you can use the same get() and put() functions.
+  This is a library to control Unicore GNSS receivers, with
+  a focus on the UM980 Triband receiver. Other receivers in the
+  same family should work: UM982, UM960, UM960L, etc.
 
-  https://github.com/sparkfun/SparkFun_External_EEPROM_Arduino_Library
-  Best used with the Qwiic EEPROM: https://www.sparkfun.com/products/14764
-
-  Various external EEPROMs have various interface specs
-  (overall size, page size, write times, etc). This library works with
-  all types and allows the various settings to be set at runtime.
-
-  All read and write restrictions associated with pages are taken care of.
-  You can access the external memory as if it was contiguous.
+  https://github.com/sparkfun/SparkFun_Unicore_GNSS_Arduino_Library
+  Best used with the UM980 Breakout: https://www.sparkfun.com/products/23286
 
   Development environment specifics:
   Arduino IDE 1.8.x
@@ -44,6 +37,7 @@ typedef enum
     UM980_RESULT_BAD_START_BYTE,
     UM980_RESULT_BAD_CHECKSUM,
     UM980_RESULT_BAD_CRC,
+    UM980_RESULT_MISSING_CRC,
     UM980_RESULT_TIMEOUT,
     UM980_RESULT_RESPONSE_OVERFLOW,
 } Um980Result;
@@ -252,6 +246,7 @@ class UM980
     Um980Result getResponseBinary(const char *command, uint8_t *response, uint16_t *maxResponseLength,
                                   uint16_t maxWaitMs);
     Um980Result checkChecksum(char *response);
+    Um980Result checkCRC(char *response);
     uint32_t calculateCRC32(uint8_t *charBuffer, uint16_t bufferSize);
 
     // Main helper functions
