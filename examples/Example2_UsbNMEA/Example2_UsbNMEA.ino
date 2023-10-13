@@ -56,19 +56,6 @@ void setup()
   //Turn off all NMEA, RTCM, and any other message that may be reporting periodically
   response &= myGNSS.disableOutput();
 
-  //Enable GPS L1/L2/L5 signals
-  if(myGNSS.sendCommand("UNMASK GPS") == true) Serial.println("GPS enabled");
-  else Serial.println("GPS unmask error");
-
-  if(myGNSS.sendCommand("UNMASK L1") == true) Serial.println("GPS L1 enabled");
-  else Serial.println("GPS unmask L1 error");
-
-  if(myGNSS.sendCommand("UNMASK L2") == true) Serial.println("GPS L2 enabled");
-  else Serial.println("GPS unmask L2 error");
-
-  if(myGNSS.sendCommand("UNMASK L5") == true) Serial.println("GPS L5 enabled");
-  else Serial.println("GPS unmask L5 error");
-
   float outputRate = 0.5; //0.5 = 2 reports per second.
 
   char comPort[] = "COM1";
