@@ -112,7 +112,6 @@ const unsigned long crcTable[256] = {
 bool UM980::begin(HardwareSerial &serialPort)
 {
     _hwSerialPort = &serialPort;
-    _swSerialPort = nullptr;
 
     // We assume the user has started the serial port with proper pins and baud rate prior to calling begin()
 
@@ -152,6 +151,90 @@ void UM980::enableDebugging(Print &debugPort)
 void UM980::disableDebugging()
 {
     _debugPort = nullptr;
+}
+
+// Check for new data until there is no more
+bool UM980::update()
+{
+    bool newData = false;
+    while (serialAvailable())
+        newData = updateOnce();
+    return (newData);
+}
+
+// Checks for new data once
+// Used during sendString and sendQuery
+bool UM980::updateOnce()
+{
+    if (serialAvailable())
+    {
+        uint8_t incoming = serialRead();
+
+        // Move byte into parser
+        parse.buffer[parse.length++] = incoming;
+        parse.length %= PARSE_BUFFER_LENGTH;
+
+        // Update the parser state based on the incoming byte
+        switch (parse.state)
+        {
+        default:
+            Serial.println("Case not found!");
+            // Drop to waiting for preamble
+        case (PARSE_STATE_WAITING_FOR_PREAMBLE):
+            waitForPreamble(&parse, incoming);
+            break;
+
+        case (PARSE_STATE_NMEA_FIRST_COMMA):
+            nmeaFindFirstComma(&parse, incoming);
+            break;
+        case (PARSE_STATE_NMEA_FIND_ASTERISK):
+            nmeaFindAsterisk(&parse, incoming);
+            break;
+        case (PARSE_STATE_NMEA_CHECKSUM1):
+            nmeaChecksumByte1(&parse, incoming);
+            break;
+        case (PARSE_STATE_NMEA_CHECKSUM2):
+            nmeaChecksumByte2(&parse, incoming);
+            break;
+        case (PARSE_STATE_NMEA_TERMINATION):
+            nmeaLineTermination(&parse, incoming);
+            break;
+
+            // case (PARSE_STATE_UNICORE_SYNC2):
+            //     unicoreBinarySync2(&parse, incoming);
+            //     break;
+            // case (PARSE_STATE_UNICORE_SYNC3):
+            //     unicoreBinarySync3(&parse, incoming);
+            //     break;
+            // case (PARSE_STATE_UNICORE_READ_LENGTH):
+            //     unicoreBinaryReadLength(&parse, incoming);
+            //     break;
+            // case (PARSE_STATE_UNICORE_READ_DATA):
+            //     unicoreReadData(&parse, incoming);
+            //     break;
+
+            // case (PARSE_STATE_RTCM_LENGTH1):
+            //     rtcmReadLength1(&parse, incoming);
+            //     break;
+            // case (PARSE_STATE_RTCM_LENGTH2):
+            //     rtcmReadLength2(&parse, incoming);
+            //     break;
+            // case (PARSE_STATE_RTCM_MESSAGE1):
+            //     rtcmReadMessage1(&parse, incoming);
+            //     break;
+            // case (PARSE_STATE_RTCM_MESSAGE2):
+            //     rtcmReadMessage2(&parse, incoming);
+            //     break;
+            // case (PARSE_STATE_RTCM_DATA):
+            //     rtcmReadData(&parse, incoming);
+            //     break;
+            // case (PARSE_STATE_RTCM_CRC):
+            //     rtcmReadCrc(&parse, incoming);
+            // break;
+        }
+        return (true);
+    }
+    return (false);
 }
 
 // Mode
@@ -229,8 +312,8 @@ bool UM980::setModeRoverAutomotive()
 }
 bool UM980::setModeRoverMow()
 {
-    return (setModeRover(
-        "SURVEY MOW")); // This fails for unknown reasons. Might be build7923 required, might not be supported on UM980.
+    return (setModeRover("SURVEY MOW")); // This fails for unknown reasons. Might be build7923 required, might not
+                                         // be supported on UM980.
 }
 
 // Config
@@ -354,9 +437,8 @@ bool UM980::disableFrequency(const char *frequencyName)
     return (disableSystem(command));
 }
 
-// Called mask (disable) and unmask (enable), this is how to ignore certain constellations, or signal/frequencies, or
-// satellite elevations
-// Returns true if successful
+// Called mask (disable) and unmask (enable), this is how to ignore certain constellations, or signal/frequencies,
+// or satellite elevations Returns true if successful
 bool UM980::enableSystem(const char *systemName)
 {
     char command[50];
@@ -518,11 +600,15 @@ bool UM980::sendCommand(const char *command, uint16_t maxWaitMs)
 // Looks for a query response ('#')
 // Some commands like MASK or CONFIG have responses that begin with $
 //'#' begins the responses to queries, ie 'MODE', ends with the result (ie MODE ROVER)
+// #MODE,97,GPS,FINE,2283,499142000,0,0,18,22;MODE BASE -1280206.5680 -4716804.4030 4086665.4840,*60
+
 //'$' begins the responses to commands, ie 'MODE ROVER', ends with OK
 // Contains reponse for caller
 Um980Result UM980::sendQuery(const char *command, char *response, uint16_t *maxResponseLength, uint16_t maxWaitMs)
 {
     Um980Result result;
+
+    Serial.println("Sending query");
 
     clearBuffer();
 
@@ -531,69 +617,171 @@ Um980Result UM980::sendQuery(const char *command, char *response, uint16_t *maxR
     if (result != UM980_RESULT_OK)
         return (result);
 
-    // Determine the response character we should expect
-    // For CONFIG and MASK, the data will be prefixed with a $
-    // For MODE and any Unicore command, the data will be prefixed with a #
-    // For VERSION, the sentence is terminated with a 32-bit CRC, not an 8-bit checksum
+    Serial.println("Feeding parser");
 
-    uint8_t characterToFind = '#'; // Default to looking for the start of a response to a MODE or Unicore command
-    bool multiLineResponse = false;
-    bool crcCheck = false;
+    parse.length = 0; // Reset parser
+    strncpy(commandName, command, sizeof(commandName));
+    commandResponse = UM980_RESULT_RESPONSE_COMMAND_WAITING; // Reset
 
-    // Check for CONFIG or MASK
-    char *commandConfigPointer = strcasestr(command, "CONFIG");
-    if (commandConfigPointer != nullptr) // Found
+    Serial.printf("commandName1: %s\r\n", commandName);
+
+    // Feed the parser until we see a response to the command
+    int wait = 0;
+    while (1)
     {
-        characterToFind = '$';
-        multiLineResponse = true;
-        maxWaitMs = 100; // Because it is a multi-line response, we depend on a timeout to exit
+        if (wait++ == maxWaitMs)
+        {
+            Serial.println("sendQuery timeout");
+            return (UM980_RESULT_TIMEOUT_RESPONSE);
+        }
+
+        updateOnce(); // Will call eomHandler()
+
+        if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_OK)
+            break;
+
+        if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_ERROR)
+        {
+            Serial.println("sendQuery command error");
+            return (UM980_RESULT_RESPONSE_COMMAND_ERROR);
+        }
+
+        delay(1);
     }
 
-    char *commandMaskPointer = strcasestr(command, "MASK");
-    if (commandMaskPointer != nullptr) // Found
-    {
-        characterToFind = '$';
-        multiLineResponse = true; // Mask may be single or multi-line.
-        maxWaitMs = 100;          // Because it is a multi-line response, we depend on a timeout to exit
-    }
-
-    char *commandVersionPointer = strcasestr(command, "VERSION");
-    if (commandVersionPointer != nullptr) // Found
-    {
-        characterToFind = '#';
-        multiLineResponse = false; // Mask may be single or multi-line.
-        crcCheck = true;
-        maxWaitMs = 100; // Because it is a multi-line response, we depend on a timeout to exit
-    }
-
-    result = getResponseAscii(characterToFind, response, maxResponseLength, multiLineResponse, maxWaitMs);
-    if (result != UM980_RESULT_OK)
-        return (result);
-
-    debugPrintf("UM980 response length %d: %s", *maxResponseLength, response);
-
-    if (crcCheck == true)
-    {
-        result = checkCRC(response); // Assumes response is \0 terminated
-        if (result != UM980_RESULT_OK)
-            return (result);
-    }
-    else
-    {
-        result = checkChecksum(response); // Assumes response is \0 terminated
-        if (result != UM980_RESULT_OK)
-            return (result);
-    }
-
-    // Verify this response is for this command
-    char *commandPointer = strstr(response, command);
-    if (commandPointer == nullptr) // Not found
-    {
-        debugPrintf("Wrong command");
-        return (UM980_RESULT_WRONG_COMMAND);
-    }
+    debugPrintf("Found OK to command");
 
     return (UM980_RESULT_OK);
+
+    // // Determine the response character we should expect
+
+    // uint8_t characterToFind = '#'; // Default to looking for the start of a response to a MODE or Unicore command
+    // bool multiLineResponse = false;
+    // bool crcCheck = false;
+
+    // // Check for CONFIG or MASK
+    // char *commandConfigPointer = strcasestr(command, "CONFIG");
+    // if (commandConfigPointer != nullptr) // Found
+    // {
+    //     characterToFind = '$';
+    //     multiLineResponse = true;
+    //     maxWaitMs = 100; // Because it is a multi-line response, we depend on a timeout to exit
+    // }
+
+    // char *commandMaskPointer = strcasestr(command, "MASK");
+    // if (commandMaskPointer != nullptr) // Found
+    // {
+    //     characterToFind = '$';
+    //     multiLineResponse = true; // Mask may be single or multi-line.
+    //     maxWaitMs = 100;          // Because it is a multi-line response, we depend on a timeout to exit
+    // }
+
+    // char *commandVersionPointer = strcasestr(command, "VERSION");
+    // if (commandVersionPointer != nullptr) // Found
+    // {
+    //     characterToFind = '#';
+    //     multiLineResponse = false; // Mask may be single or multi-line.
+    //     crcCheck = true;
+    //     maxWaitMs = 100; // Because it is a multi-line response, we depend on a timeout to exit
+    // }
+
+    // result = getResponseAscii(characterToFind, response, maxResponseLength, multiLineResponse, maxWaitMs);
+    // if (result != UM980_RESULT_OK)
+    //     return (result);
+
+    // debugPrintf("UM980 response length %d: %s", *maxResponseLength, response);
+
+    // if (crcCheck == true)
+    // {
+    //     result = checkCRC(response); // Assumes response is \0 terminated
+    //     if (result != UM980_RESULT_OK)
+    //         return (result);
+    // }
+    // else
+    // {
+    //     result = checkChecksum(response); // Assumes response is \0 terminated
+    //     if (result != UM980_RESULT_OK)
+    //         return (result);
+    // }
+
+    // // Verify this response is for this command
+    // char *commandPointer = strcasestr(response, command);
+    // if (commandPointer == nullptr) // Not found
+    // {
+    //     debugPrintf("Wrong command");
+    //     return (UM980_RESULT_WRONG_COMMAND);
+    // }
+
+    // return (UM980_RESULT_OK);
+}
+
+// End of message handler
+// Crack the response into various endpoints
+// If it's a response to a command, is it OK or BAD? $command,badResponse,response:
+// PARSING FAILD NO MATCHING FUNC BADRESPONSE*40
+// If it's Unicore binary, load into target variables If it's NMEA or RTCM, discard
+void UM980::eomHandler(PARSE_STATE *parse)
+{
+    // Switch on message type (NMEA, RTCM, Unicore Binary, etc)
+
+    if (parse->messageType == SFE_SENTENCE_TYPE_UNICORE_COMMAND_RESPONSE)
+    {
+        // Does this response contain the command we are looking for?
+        // It may be anywhere in the response:
+        // $command,MODE,response: OK*5D
+        char *responsePointer = strcasestr((char *)parse->buffer, commandName);
+        if (responsePointer != nullptr) // Found
+        {
+            // Check to see if we got a command response
+            responsePointer = strcasestr((char *)parse->buffer, "OK");
+            if (responsePointer != nullptr) // Found
+            {
+                commandResponse = UM980_RESULT_RESPONSE_COMMAND_OK;
+                return;
+            }
+
+            responsePointer = strcasestr((char *)parse->buffer, "PARSING");
+            if (responsePointer != nullptr) // Found
+            {
+                commandResponse = UM980_RESULT_RESPONSE_COMMAND_ERROR;
+                return;
+            }
+        }
+    }
+    else if (parse->messageType == SFE_SENTENCE_TYPE_UNICORE_POUND_RESPONSE)
+    {
+        Serial.println("Handling Unicore pound response");
+
+        Serial.printf("parse->nmeaMessageName: %s\r\n", (char *)parse->nmeaMessageName);
+
+        // Does this response contain the command we are looking for?
+        if (strcasecmp((char *)parse->nmeaMessageName, commandName) == 0) // Found
+        {
+            Serial.println("Command name matches");
+
+            commandResponse = UM980_RESULT_RESPONSE_COMMAND_OK;
+        }
+    }
+    else if (parse->messageType == SFE_SENTENCE_TYPE_NMEA)
+    {
+        Serial.println("Handling NMEA response");
+
+        // ID the NMEA message type
+
+        Serial.print("NMEA Handler: ");
+        for (int x = 0; x < parse->length; x++)
+            Serial.write(parse->buffer[x]);
+        Serial.println();
+    }
+    else if (parse->messageType == SFE_SENTENCE_TYPE_UNICORE_BINARY)
+    {
+        // unicoreHandler();
+        Serial.println("Unicore handler");
+    }
+    else if (parse->messageType == SFE_SENTENCE_TYPE_RTCM)
+    {
+        Serial.println("RTCM handler");
+    }
 }
 
 Um980Result UM980::sendQuery(const char *command, char *response, int *maxResponseLength, uint16_t maxWaitMs)
@@ -602,46 +790,48 @@ Um980Result UM980::sendQuery(const char *command, char *response, int *maxRespon
 }
 
 // Send a string to the UM980
-// Looks for a command response ('$')
+// Looks for a command response ('#' or '$')
 //'#' begins the responses to queries, ie 'MODE', ends with the result (ie MODE ROVER)
 //'$' begins the responses to commands, ie 'MODE ROVER', ends with OK
+//$command,badResponse,response: PARSING FAILD NO MATCHING FUNC  BADRESPONSE*40
 // Returns UM980 result
 Um980Result UM980::sendString(const char *command, uint16_t maxWaitMs)
 {
     clearBuffer();
 
+    Serial.println("Sending string");
+
+    parse.length = 0; // Reset parser
+    strncpy(commandName, command, sizeof(commandName));
+    commandResponse = UM980_RESULT_RESPONSE_COMMAND_WAITING; // Reset
+
     serialPrintln(command);
 
-    char response[500];
-    uint16_t responseLength = sizeof(response);
-    Um980Result result;
-
-    // All responses to command strings start with a $
-    //$command,MASK,response: OK*4A
-    result = getResponseAscii('$', response, &responseLength, false, maxWaitMs); // Single line response
-    if (result != UM980_RESULT_OK)
-        return (result);
-
-    debugPrintf("UM980 response length %d: %s", responseLength, response);
-
-    result = checkChecksum(response); // Assumes response is \0 terminated
-    if (result != UM980_RESULT_OK)
-        return (result);
-
-    // Verify this response is for this command
-    char *commandPointer = strstr(response, command);
-    if (commandPointer == nullptr) // Not found
+    // Feed the parser until we see a response to the command
+    int wait = 0;
+    while (1)
     {
-        debugPrintf("Wrong command");
-        return (UM980_RESULT_WRONG_COMMAND);
-    }
+        if (wait++ == maxWaitMs)
+        {
+            Serial.println("sednString Timeout");
+            return (UM980_RESULT_TIMEOUT_RESPONSE);
+        }
 
-    char *okPointer = strstr(
-        response, ": OK"); // We could check for OK, but this should remove confusion with strings that may contain OK
-    if (okPointer == nullptr)
-    {
-        debugPrintf("Command error");
-        return (UM980_RESULT_COMMAND_ERROR); // Not found
+        updateOnce(); // Will call eomHandler()
+
+        if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_OK)
+        {
+            Serial.println("sendstring command ok");
+            break;
+        }
+
+        if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_ERROR)
+        {
+            Serial.println("sendstring Command error");
+            return (UM980_RESULT_RESPONSE_COMMAND_ERROR);
+        }
+
+        delay(1);
     }
 
     return (UM980_RESULT_OK);
@@ -861,7 +1051,8 @@ uint32_t UM980::calculateCRC32(uint8_t *charBuffer, uint16_t bufferSize)
 // Scans a response for the * terminator character
 // Assumes response is null terminated
 // Used for visible CRC (for example VERSION query)
-// Ex: #VERSION,97,GPS,FINE,2282,248561000,0,0,18,676;UM980,R4.10Build7923,HRPT00-S10C-P,2310415000001-MD22B1224962616,ff3bac96f31f9bdd,2022/09/28*7432d4ed
+// Ex:
+// #VERSION,97,GPS,FINE,2282,248561000,0,0,18,676;UM980,R4.10Build7923,HRPT00-S10C-P,2310415000001-MD22B1224962616,ff3bac96f31f9bdd,2022/09/28*7432d4ed
 // CRC is calculated without the # or * characters
 // Returns OK if valid CRC
 Um980Result UM980::checkCRC(char *response)
@@ -871,7 +1062,7 @@ Um980Result UM980::checkCRC(char *response)
     uint32_t sentenceCRC = 0;
     int packetLength = 0;
 
-    for (packetLength = 1; packetLength < strlen(response); packetLength++) //Remove # from CRC calculation
+    for (packetLength = 1; packetLength < strlen(response); packetLength++) // Remove # from CRC calculation
     {
         if (response[packetLength] == '*')
         {
@@ -887,7 +1078,7 @@ Um980Result UM980::checkCRC(char *response)
                 hexString[5] = response[packetLength + 6];
                 hexString[6] = response[packetLength + 7];
                 hexString[7] = response[packetLength + 8];
-                sentenceCRC = strtoul(hexString, NULL, 16); //Unsigned Long variant of strtol
+                sentenceCRC = strtoul(hexString, NULL, 16); // Unsigned Long variant of strtol
             }
             break; // Exclude * from CRC
         }
@@ -964,10 +1155,6 @@ uint16_t UM980::serialAvailable()
     {
         return (_hwSerialPort->available());
     }
-    else if (_swSerialPort != nullptr)
-    {
-        return (_swSerialPort->available());
-    }
     return (0);
 }
 
@@ -977,10 +1164,6 @@ uint8_t UM980::serialRead()
     {
         return (_hwSerialPort->read());
     }
-    else if (_swSerialPort != nullptr)
-    {
-        return (_swSerialPort->read());
-    }
     return (0);
 }
 
@@ -989,10 +1172,6 @@ void UM980::serialPrintln(const char *command)
     if (_hwSerialPort != nullptr)
     {
         _hwSerialPort->println(command);
-    }
-    else if (_swSerialPort != nullptr)
-    {
-        _swSerialPort->println(command);
     }
 }
 
@@ -1037,12 +1216,57 @@ Um980Result UM980::updateDateTime(uint16_t maxWaitMs)
     return (UM980_RESULT_OK);
 }
 
+// PRIVATE: Allocate RAM for packetUBXNAVPVT and initialize it
+bool UM980::initPacketUNIBESTNAV()
+{
+    packetUNIBESTNAV = new UNICORE_BESTNAV_t; // Allocate RAM for the main struct
+    if (packetUNIBESTNAV == nullptr)
+    {
+        // if ((_printDebug == true) ||
+        //     (_printLimitedDebug == true)) // This is important. Print this if doing limited debugging
+        //     _debugSerial.println(F("initPacketUNIBESTNAV: RAM alloc failed!"));
+        return (false);
+    }
+    //   packetUNIBESTNAV->automaticFlags.flags.all = 0;
+    //   packetUNIBESTNAV->callbackPointerPtr = nullptr;
+    //   packetUNIBESTNAV->callbackData = nullptr;
+    //   packetUNIBESTNAV->moduleQueried.moduleQueried1.all = 0;
+    //   packetUNIBESTNAV->moduleQueried.moduleQueried2.all = 0;
+    return (true);
+}
+
+#define CHECK_POINTER(packetPointer, initPointer)                                                                      \
+    {                                                                                                                  \
+        if (packetPointer == nullptr)                                                                                  \
+            initPointer();                                                                                             \
+        if (packetPointer == nullptr)                                                                                  \
+            return false;                                                                                              \
+    }
+
+double UM980::getLatitude(uint16_t maxWait)
+{
+    CHECK_POINTER(packetUNIBESTNAV, initPacketUNIBESTNAV); // Check that RAM has been allocated
+
+    if (packetUNIBESTNAV->moduleQueried.bits.latitude == false)
+        getGeodetic(maxWait);
+    packetUNIBESTNAV->moduleQueried.bits.latitude =
+        false; // Since we are about to give this to user, mark this data as stale packet
+    packetUNIBESTNAV->moduleQueried.bits.all = false;
+    return (packetUNIBESTNAV->data.latitude);
+}
+
 // Issue the BESTNAVB command and parse out pertinent data
-Um980Result UM980::updateGeodetic(uint16_t maxWaitMs)
+Um980Result UM980::getGeodetic(uint16_t maxWaitMs)
 {
     uint8_t response[500];
     uint16_t responseLength = sizeof(response);
     Um980Result result;
+
+    // Send command
+
+    // Run update while we wait for response
+
+    // Once
 
     result = getResponseBinary("BESTNAVB", response, &responseLength, maxWaitMs);
     if (result != UM980_RESULT_OK)
@@ -1054,7 +1278,7 @@ Um980Result UM980::updateGeodetic(uint16_t maxWaitMs)
         return (UM980_RESULT_WRONG_MESSAGE_ID);
     // debugPrintf("Good message ID");
 
-    lastUpdateGeodetic = millis(); // Update stale marker
+    lastGetGeodetic = millis(); // Update stale marker
 
     uint8_t *data = &response[um980HeaderLength]; // Point at the start of the data fields
 
@@ -1136,45 +1360,45 @@ Um980Result UM980::updateEcef(uint16_t maxWaitMs)
 
 bool UM980::staleGeodetic()
 {
-    if (millis() - lastUpdateGeodetic > dataFreshLimit_ms)
+    if (millis() - lastGetGeodetic > dataFreshLimit_ms)
         return (true);
     return (false);
 }
 
-double UM980::getLatitude()
-{
-    if (staleGeodetic())
-        updateGeodetic();
-    return (latitude);
-}
+// double UM980::getLatitude()
+// {
+//     if (staleGeodetic())
+//         getGeodetic();
+//     return (latitude);
+// }
 double UM980::getLongitude()
 {
     if (staleGeodetic())
-        updateGeodetic();
+        getGeodetic();
     return (longitude);
 }
 double UM980::getAltitude()
 {
     if (staleGeodetic())
-        updateGeodetic();
+        getGeodetic();
     return (altitude);
 }
 float UM980::getLatitudeDeviation()
 {
     if (staleGeodetic())
-        updateGeodetic();
+        getGeodetic();
     return (latitudeDeviation);
 }
 float UM980::getLongitudeDeviation()
 {
     if (staleGeodetic())
-        updateGeodetic();
+        getGeodetic();
     return (longitudeDeviation);
 }
 float UM980::getAltitudeDeviation()
 {
     if (staleGeodetic())
-        updateGeodetic();
+        getGeodetic();
     return (heightDeviation);
 }
 
@@ -1229,13 +1453,13 @@ uint8_t UM980::getSIV()
 uint8_t UM980::getSatellitesUsed()
 {
     if (staleGeodetic())
-        updateGeodetic();
+        getGeodetic();
     return (satellitesUsed);
 }
 uint8_t UM980::getSatellitesTracked()
 {
     if (staleGeodetic())
-        updateGeodetic();
+        getGeodetic();
     return (satellitesTracked);
 }
 
@@ -1243,28 +1467,29 @@ uint8_t UM980::getSatellitesTracked()
 uint8_t UM980::getSolutionStatus()
 {
     if (staleGeodetic())
-        updateGeodetic();
+        getGeodetic();
     return (solutionStatus);
 }
 
-// 0 = no fix, 1 = dead reckoning only, 2 = 2D-fix, 3 = 3D-fix, 4 = GNSS + dead reckoning combined, 5 = time only fix
+// 0 = no fix, 1 = dead reckoning only, 2 = 2D-fix, 3 = 3D-fix, 4 = GNSS + dead reckoning combined, 5 = time only
+// fix
 uint8_t UM980::getPositionType()
 {
     if (staleGeodetic())
-        updateGeodetic();
+        getGeodetic();
     return (positionType);
 }
 
 uint8_t UM980::getRTKSolution()
 {
     if (staleGeodetic())
-        updateGeodetic();
+        getGeodetic();
     return (rtkSolution);
 }
 uint8_t UM980::getPseudorangeCorrection()
 {
     if (staleGeodetic())
-        updateGeodetic();
+        getGeodetic();
     return (pseudorangeCorrection);
 }
 
@@ -1315,7 +1540,7 @@ uint16_t UM980::getMillisecond()
 {
     if (staleDateTime())
         updateDateTime();
-    return (second);
+    return (millisecond);
 }
 
 uint8_t UM980::getTimeStatus()
@@ -1332,8 +1557,8 @@ uint8_t UM980::getDateStatus()
 }
 
 // Receiver clock offset relative to GPS time, s.
-// Positive indicates that the receiver clock is ahead of GPS time. To calculate the GPS time, use the formula below:
-// GPS time = receiver time - clock offset
+// Positive indicates that the receiver clock is ahead of GPS time. To calculate the GPS time, use the formula
+// below: GPS time = receiver time - clock offset
 double UM980::getTimeOffset()
 {
     if (staleDateTime())
@@ -1349,10 +1574,278 @@ double UM980::getTimeOffsetDeviation()
     return (timeDeviation);
 }
 
-// Return the number of millis since last updateGeodetic()
+// Return the number of millis since last getGeodetic()
 uint32_t UM980::getFixAgeMilliseconds()
 {
     if (staleGeodetic())
-        updateGeodetic();
-    return (millis() - lastUpdateGeodetic);
+        getGeodetic();
+    return (millis() - lastGetGeodetic);
+}
+
+void UM980::waitForPreamble(PARSE_STATE *parse, uint8_t data)
+{
+    // Verify that this is the preamble byte
+    switch (data)
+    {
+    case '$':
+
+        //
+        //    NMEA Message
+        //
+        //    +----------+---------+--------+---------+----------+----------+
+        //    | Preamble |  Name   | Comma  |  Data   | Asterisk | Checksum |
+        //    |  8 bits  | n bytes | 8 bits | n bytes |  8 bits  | 2 bytes  |
+        //    |     $    |         |    ,   |         |          |          |
+        //    +----------+---------+--------+---------+----------+----------+
+        //               |                            |
+        //               |<-------- Checksum -------->|
+        //
+
+    case '#':
+
+        //
+        //    Unicore response to a query command (MODE, etc)
+        //    #MODE,97,GPS,FINE,2283,499142000,0,0,18,22;MODE BASE -1280206.5680 -4716804.4030 4086665.4840,*60
+        //    Use the same NMEA parser
+
+        parse->check = 0;
+        parse->computeCrc = false;
+        parse->nmeaMessageNameLength = 0;
+        parse->state = PARSE_STATE_NMEA_FIRST_COMMA;
+        return;
+
+    case 0xD3:
+
+        //
+        //    RTCM Standard 10403.2 - Chapter 4, Transport Layer
+        //
+        //    |<------------- 3 bytes ------------>|<----- length ----->|<- 3 bytes ->|
+        //    |                                    |                    |             |
+        //    +----------+--------+----------------+---------+----------+-------------+
+        //    | Preamble |  Fill  | Message Length | Message |   Fill   |   CRC-24Q   |
+        //    |  8 bits  | 6 bits |    10 bits     |  n-bits | 0-7 bits |   24 bits   |
+        //    |   0xd3   | 000000 |   (in bytes)   |         |   zeros  |             |
+        //    +----------+--------+----------------+---------+----------+-------------+
+        //    |                                                         |
+        //    |<------------------------ CRC -------------------------->|
+        //
+
+        Serial.println("rtcm");
+
+        // Start the CRC with this byte
+        parse->check = 0;
+        parse->check = COMPUTE_CRC24Q(parse, data);
+        parse->computeCrc = true;
+        parse->state = PARSE_STATE_RTCM_LENGTH1;
+        return;
+
+    case 0xAA:
+
+        //
+        //    Unicore Binary Response
+        //
+        //    |<----- 24 byte header ------>|<--- length --->|<- 4 bytes ->|
+        //    |                             |                |             |
+        //    +------------+----------------+----------------+-------------+
+        //    |  Preamble  | See table 7-48 |      Data      |    CRC      |
+        //    |  3 bytes   |   21 bytes     |    n bytes     |   32 bits   |
+        //    | 0xAA 44 B5 |                |                |             |
+        //    +------------+----------------+----------------+-------------+
+        //    |                                              |
+        //    |<------------------------ CRC --------------->|
+        //
+
+        parse->length = 0;
+        parse->buffer[parse->length++] = data; // This byte is part of the CRC
+        parse->state = PARSE_STATE_RTCM_LENGTH2;
+        return;
+    }
+}
+
+// Read the message name
+void UM980::nmeaFindFirstComma(PARSE_STATE *parse, uint8_t data)
+{
+    parse->check ^= data;
+    if ((data != ',') || (parse->nmeaMessageNameLength == 0))
+    {
+        // UM980 respondes ("$command,CONFIG,response: OK*54") are very similar to NMEA
+        // responses.
+
+        // Save the message name
+        parse->nmeaMessageName[parse->nmeaMessageNameLength++] = data;
+    }
+    else
+    {
+        // Zero terminate the message name
+        parse->nmeaMessageName[parse->nmeaMessageNameLength++] = 0;
+        parse->state = PARSE_STATE_NMEA_FIND_ASTERISK; // Move to next state
+    }
+}
+
+// Read the message data
+void UM980::nmeaFindAsterisk(PARSE_STATE *parse, uint8_t data)
+{
+    if (data != '*')
+        parse->check ^= data;
+    else
+        parse->state = PARSE_STATE_NMEA_CHECKSUM1; // Move to next state
+}
+
+// Read the first checksum byte
+void UM980::nmeaChecksumByte1(PARSE_STATE *parse, uint8_t data)
+{
+    parse->state = PARSE_STATE_NMEA_CHECKSUM2; // Move to next state
+}
+
+// Read the second checksum byte
+void UM980::nmeaChecksumByte2(PARSE_STATE *parse, uint8_t data)
+{
+    parse->nmeaLength = parse->length;
+    parse->bytesRemaining = 2;
+    parse->state = PARSE_STATE_NMEA_TERMINATION; // Move to next state
+}
+
+// Read the line termination
+void UM980::nmeaLineTermination(PARSE_STATE *parse, uint8_t data)
+{
+    int checksum;
+
+    // We expect a \r\n termination, but may vary between receiver types
+    if (data == '\r' || data == '\n')
+    {
+        parse->bytesRemaining -= 1; // Account for a byte received
+    }
+
+    // If we receive something other than a terminator, or if we've hit 0 bytes remaining, process sentence
+    if (((data != '\r') && (data != '\n')) || (parse->bytesRemaining == 0))
+    {
+        // If it's not a terminator, remove this character from the buffer
+        if ((data != '\r') && (data != '\n'))
+            parse->length--;
+
+        // Convert the checksum characters into binary
+        checksum = AsciiToNibble(parse->buffer[parse->nmeaLength - 2]) << 4;
+        checksum |= AsciiToNibble(parse->buffer[parse->nmeaLength - 1]);
+
+        parse->messageType = SFE_SENTENCE_TYPE_NMEA;
+
+        Serial.print("Parser Data: ");
+        for (int x = 0; x < parse->length; x++)
+            Serial.write(parse->buffer[x]);
+
+        // $GPGGA - NMEA prefixed with $ and the checksum is complete
+
+        //$command,mode,response: OK*5D
+        //$CONFIG,MASK,MASK 5.0*25
+        //$CONFIG,ANTENNA,CONFIG ANTENNA POWERON*7A
+        // For command, CONFIG, and MASK, the data will be prefixed with a $, and needs $ added to checksum
+
+        // #MODE,97,GPS,FINE,2283,499142000,0,0,18,22;MODE BASE -1280206.5680 -4716804.4030 4086665.4840,*60
+        // For MODE and any Unicore command, the data will be prefixed with a #, and needs # added to checksum
+
+        // #VERSION,97,GPS,FINE,2282,248561000,0,0,18,676;UM980,R4.10Build7923,HRPT00-S10C-P,2310415000001-MD22B1224962616,ff3bac96f31f9bdd,2022/09/28*7432d4ed
+        // For VERSION, the data will be prefixed with a #, uses a 32-bit CRC
+
+        // Handle CRC for command response with a leading #
+        if (parse->buffer[0] == '#')
+        {
+            parse->messageType = SFE_SENTENCE_TYPE_UNICORE_POUND_RESPONSE;
+
+            // Determine if this response type uses checksum or CRC
+            char *responseType = strcasestr((char *)parse->nmeaMessageName, "VERSION");
+            if (responseType != nullptr) // Found
+            {
+                if (checkCRC((char *)parse->buffer) == UM980_RESULT_OK)
+                {
+                    Serial.println("Good CRC32!");
+                    checksum = parse->check; // Mark message as valid
+                }
+            }
+            else
+            {
+                // Must be MODE response
+                // #MODE,97,GPS,FINE,2283,499142000,0,0,18,22;MODE BASE -1280206.5680 -4716804.4030 4086665.4840,*60
+                parse->check ^= '#';
+            }
+        }
+        else
+        {
+            // Sentence starts with '$'
+
+            // NMEA checksum excludes the $ and *
+            // Unicore includes the $, excludes the *
+            // If this is a Unicore response, we need to add a $ to the checksum
+            //$command,MODE,response: OK*5D
+            if (strcasecmp((char *)parse->nmeaMessageName, "command") == 0 ||
+                strcasecmp((char *)parse->nmeaMessageName, "MASK") == 0 ||
+                strcasecmp((char *)parse->nmeaMessageName, "CONFIG") == 0) // Found
+            {
+                parse->check ^= '$';
+                parse->messageType = SFE_SENTENCE_TYPE_UNICORE_COMMAND_RESPONSE;
+            }
+        }
+
+        // Validate the checksum
+        if (checksum == parse->check)
+            parse->check = 0;
+
+        // Process this message if CRC is valid
+        if (parse->check == 0)
+        {
+            // CRC is valid
+
+            // Return immediately if we are expecting a command
+            if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_WAITING)
+            {
+                Serial.println("nmeaTermination Returning after EOM handler");
+                eomHandler(parse);
+                parse->state = PARSE_STATE_WAITING_FOR_PREAMBLE; // Move to next state
+                return;
+            }
+
+            // Otherwise, continue parsing after handler
+            eomHandler(parse);
+        }
+        else
+        {
+            Serial.print("Bad CRC. Expecting: ");
+            Serial.print(checksum);
+            Serial.print(" Found: ");
+            Serial.print(parse->check);
+            Serial.println();
+            Serial.print("Data: ");
+            for (int x = 0; x < parse->length; x++)
+                Serial.write(parse->buffer[x]);
+            Serial.println();
+
+            parse->messageType = SFE_SENTENCE_TYPE_NONE;
+        }
+
+        if ((data != '\r') && (data != '\n'))
+        {
+            // We already have new data, process it immediately
+            parse->length = 0;
+            parse->buffer[parse->length++] = data;
+            parse->state = PARSE_STATE_WAITING_FOR_PREAMBLE; // Move to next state
+            return (waitForPreamble(parse, data));
+        }
+        else
+        {
+            // We're done. Move on to waiting.
+            parse->length = 0;
+            parse->state = PARSE_STATE_WAITING_FOR_PREAMBLE; // Move to next state
+        }
+    }
+}
+
+// Convert nibble to ASCII
+int UM980::AsciiToNibble(int data)
+{
+    // Convert the value to lower case
+    data |= 0x20;
+    if ((data >= 'a') && (data <= 'f'))
+        return data - 'a' + 10;
+    if ((data >= '0') && (data <= '9'))
+        return data - '0';
+    return -1;
 }
