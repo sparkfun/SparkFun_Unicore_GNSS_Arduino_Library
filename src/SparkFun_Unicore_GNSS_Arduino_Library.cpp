@@ -223,7 +223,7 @@ bool UM980::updateOnce()
     return (false);
 }
 
-// Mode
+// Mode commands
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // Directly set a mode: setMode("ROVER");
@@ -302,7 +302,7 @@ bool UM980::setModeRoverMow()
                                          // be supported on UM980.
 }
 
-// Config
+// Config commands
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // Configure a given COM port to a given baud
@@ -354,7 +354,7 @@ bool UM980::configurePPS(const char *configString)
     return (sendCommand(command));
 }
 
-// Mask
+// Mask commands
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // Available constellations: GPS, BDS, GLO, GAL, QZSS, IRNSS
@@ -441,7 +441,7 @@ bool UM980::disableSystem(const char *systemName)
     return (sendCommand(command));
 }
 
-// Data Output
+// Data Output commands
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // Set the output rate of a given message on a given COM port/Use
@@ -503,7 +503,7 @@ bool UM980::setRTCMMessage(const char *sentenceType, float outputRate)
     return (sendCommand(command));
 }
 
-// Other
+// Other commands
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // Disables all messages on this port
@@ -543,7 +543,8 @@ bool UM980::saveConfiguration()
     return (sendCommand("SAVECONFIG"));
 }
 
-// Lower level interface functions
+//Abstraction of the serial interface
+//Useful if we ever need to support SoftwareSerial
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // Enable printfs to various endpoints
@@ -573,8 +574,41 @@ void UM980::debugPrintf(const char *format, ...)
     va_end(args2);
 }
 
+// Discards any characters sitting in RX buffer
+void UM980::clearBuffer()
+{
+    while (serialAvailable())
+        serialRead();
+}
 
-//Query and send commands
+uint16_t UM980::serialAvailable()
+{
+    if (_hwSerialPort != nullptr)
+    {
+        return (_hwSerialPort->available());
+    }
+    return (0);
+}
+
+uint8_t UM980::serialRead()
+{
+    if (_hwSerialPort != nullptr)
+    {
+        return (_hwSerialPort->read());
+    }
+    return (0);
+}
+
+void UM980::serialPrintln(const char *command)
+{
+    if (_hwSerialPort != nullptr)
+    {
+        _hwSerialPort->println(command);
+    }
+}
+
+
+//Query and send functionality
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // Send a command string (ie 'MODE ROVER') to the UM980
@@ -743,44 +777,6 @@ Um980Result UM980::checkCRC(char *response)
     }
 
     return (UM980_RESULT_OK);
-}
-
-
-//Abstraction of the serial interface
-//Useful if we ever need to support SoftwareSerial
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-// Discards any characters sitting in RX buffer
-void UM980::clearBuffer()
-{
-    while (serialAvailable())
-        serialRead();
-}
-
-uint16_t UM980::serialAvailable()
-{
-    if (_hwSerialPort != nullptr)
-    {
-        return (_hwSerialPort->available());
-    }
-    return (0);
-}
-
-uint8_t UM980::serialRead()
-{
-    if (_hwSerialPort != nullptr)
-    {
-        return (_hwSerialPort->read());
-    }
-    return (0);
-}
-
-void UM980::serialPrintln(const char *command)
-{
-    if (_hwSerialPort != nullptr)
-    {
-        _hwSerialPort->println(command);
-    }
 }
 
 //Main Unicore handler and RAM inits

@@ -144,7 +144,7 @@ class UM980
     Print *_debugPort = nullptr; // The stream to send debug messages to if enabled. Usually Serial.
 
     void debugPrintf(const char *format, ...);
-    
+
   protected:
     HardwareSerial *_hwSerialPort = nullptr;
 
@@ -213,7 +213,6 @@ class UM980
     bool sendCommand(const char *command, uint16_t maxWaitMs = 1500);
     Um980Result sendQuery(const char *command, char *response, uint16_t *maxResponseLength, uint16_t maxWaitMs = 1500);
     Um980Result sendQuery(const char *command, char *response, int *maxResponseLength, uint16_t maxWaitMs = 1500);
-
     Um980Result sendString(const char *command, uint16_t maxWaitMs = 1500);
     Um980Result checkCRC(char *response);
 
@@ -257,17 +256,13 @@ class UM980
     void unicoreHandler(uint8_t *data, uint16_t length);
 
     bool initBestnav(uint8_t rate = 1);
-    UNICORE_BESTNAV_t *packetBESTNAV =
-        nullptr; // Pointer to struct. RAM will be allocated for this if/when necessary
+    UNICORE_BESTNAV_t *packetBESTNAV = nullptr;
 
     bool initBestnavXyz(uint8_t rate = 1);
-    UNICORE_BESTNAVXYZ_t *packetBESTNAVXYZ =
-        nullptr; // Pointer to struct. RAM will be allocated for this if/when necessary
+    UNICORE_BESTNAVXYZ_t *packetBESTNAVXYZ = nullptr;
 
     bool initRectime(uint8_t rate = 1);
-    UNICORE_RECTIME_t *packetRECTIME =
-        nullptr; // Pointer to struct. RAM will be allocated for this if/when necessary
-
+    UNICORE_RECTIME_t *packetRECTIME = nullptr;
 };
 
 #endif //_SPARKFUN_UNICORE_GNSS_ARDUINO_LIBRARY_H
