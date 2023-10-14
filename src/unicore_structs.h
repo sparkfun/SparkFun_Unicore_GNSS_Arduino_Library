@@ -4,7 +4,6 @@
 typedef struct
 {
 
-    uint8_t positionType; // 0 = None, 1 = FixedPos, 8 = DopplerVelocity, 16 = Single, ...
     double latitude;
     double longitude;
     double altitude;
@@ -12,74 +11,65 @@ typedef struct
     float longitudeDeviation;
     float heightDeviation;
 
+    uint8_t positionType; // 0 = None, 1 = FixedPos, 8 = DopplerVelocity, 16 = Single, ...
+    uint8_t
+        solutionStatus; // 0 = Solution computed, 1 = Insufficient observation, 3 = No convergence, 4 = Covariance trace
+
     uint8_t satellitesTracked;
     uint8_t satellitesUsed;
 
     uint8_t rtkSolution = 0;
     uint8_t pseudorangeCorrection = 0;
-
-    uint8_t
-        solutionStatus; // 0 = Solution computed, 1 = Insufficient observation, 3 = No convergence, 4 = Covariance trace
-
-    // uint8_t extSolStat;
-    // memcpy(&extSolStat, &data[offsetBestnavExtSolStat], sizeof(uint8_t));
-    // rtkSolution = extSolStat & 0x01; // 0 = checked, 1 = unchecked
-    // pseudorangeCorrection = extSolStat >> 1;
-
-    //  union
-    //  {
-    //    uint8_t all;
-    //    struct
-    //    {
-    //      uint8_t gnssFixOK : 1; // 1 = valid fix (i.e within DOP & accuracy masks)
-    //      uint8_t diffSoln : 1;  // 1 = differential corrections were applied
-    //      uint8_t psmState : 3;
-    //      uint8_t headVehValid : 1; // 1 = heading of vehicle is valid, only set if the receiver is in sensor fusion
-    //      mode uint8_t carrSoln : 2;     // Carrier phase range solution status:
-    //                                // 0: no carrier phase range solution
-    //                                // 1: carrier phase range solution with floating ambiguities
-    //                                // 2: carrier phase range solution with fixed ambiguities
-    //    } bits;
-    //  } flags;
-
 } UNICORE_BESTNAV_data_t;
-
-typedef struct
-{
-  union
-  {
-    uint32_t all;
-    struct
-    {
-      uint32_t all : 1;
-
-      uint32_t solutionStatus : 1;
-      uint32_t positionType : 1;
-      uint32_t latitude : 1;
-      uint32_t longitude : 1;
-      uint32_t altitude : 1;
-      uint32_t latitudeDeviation : 1;
-      uint32_t longitudeDeviation : 1;
-
-      uint32_t heightDeviation : 1;
-      uint32_t satellitesTracked : 1;
-      uint32_t satellitesUsed : 1;
-      uint32_t validMag : 1;
-
-      uint32_t rtkSolution : 1;
-      uint32_t pseudorangeCorrection : 1;
-    } bits;
-  };
-} UNICORE_BESTNAV_moduleQueried_t;
 
 typedef struct
 {
     // ubxAutomaticFlags automaticFlags;
     UNICORE_BESTNAV_data_t data;
-    UNICORE_BESTNAV_moduleQueried_t moduleQueried;
     void (*callbackPointerPtr)(UNICORE_BESTNAV_data_t *);
     UNICORE_BESTNAV_data_t *callbackData;
 } UNICORE_BESTNAV_t;
+
+typedef struct
+{
+    double ecefX = 0;
+    double ecefY = 0;
+    double ecefZ = 0;
+    float ecefXDeviation = 0;
+    float ecefYDeviation = 0;
+    float ecefZDeviation = 0;
+} UNICORE_BESTNAVXYZ_data_t;
+
+typedef struct
+{
+    // ubxAutomaticFlags automaticFlags;
+    UNICORE_BESTNAVXYZ_data_t data;
+    void (*callbackPointerPtr)(UNICORE_BESTNAVXYZ_data_t *);
+    UNICORE_BESTNAVXYZ_data_t *callbackData;
+} UNICORE_BESTNAVXYZ_t;
+
+typedef struct
+{
+    uint16_t year = 0;
+    uint8_t month = 0;
+    uint8_t day = 0;
+    uint8_t hour = 0;
+    uint8_t minute = 0;
+    uint8_t second = 0;
+    uint16_t millisecond = 0;
+    uint8_t timeStatus = 3; // 0 = valid, 3 = invalid
+    uint8_t dateStatus = 0; // 0 = Invalid, 1 = valid, 2 = leap second warning
+    double timeOffset = 0;
+    double timeDeviation = 0;
+} UNICORE_RECTIME_data_t;
+
+typedef struct
+{
+    // ubxAutomaticFlags automaticFlags;
+    UNICORE_RECTIME_data_t data;
+    void (*callbackPointerPtr)(UNICORE_RECTIME_data_t *);
+    UNICORE_RECTIME_data_t *callbackData;
+} UNICORE_RECTIME_t;
 
 //From Unicore Reference Command Manual
 const unsigned long crcTable32[256] = {

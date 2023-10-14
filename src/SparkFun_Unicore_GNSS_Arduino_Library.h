@@ -25,31 +25,8 @@
 #include <SoftwareSerial.h>
 #endif
 
+#include "parser.h"
 #include "unicore_structs.h"
-
-typedef struct _PARSE_STATE *P_PARSE_STATE;
-
-#define PARSE_BUFFER_LENGTH 1000 // Some responses (CONFIG) can be ~780 bytes
-
-typedef struct _PARSE_STATE
-{
-    uint8_t state;
-    uint8_t buffer[PARSE_BUFFER_LENGTH]; // Buffer containing the message
-    uint16_t length;                     // Message length including line termination
-    uint8_t messageType;                 // NMEA, RTCM, Unicore Binary, etc
-    uint32_t check;                      // Checksum (NMEA), CRC24Q (RTCM), CRC32 (Unicore)
-
-    uint32_t invalidRtcmCrcs;      // Number of bad RTCM CRCs detected
-    uint16_t bytesRemaining;       // Bytes remaining in RTCM CRC calculation
-    uint16_t maxLength;            // Maximum message length including line termination
-    uint16_t message;              // RTCM message number
-    uint16_t nmeaLength;           // Length of the NMEA message without line termination
-    uint8_t nmeaMessageName[16];   // Message name
-    uint8_t nmeaMessageNameLength; // Length of the message name
-
-    bool computeCrc; // Compute the CRC when true
-
-} PARSE_STATE;
 
 // Default maximum NMEA byte count
 // maxNMEAByteCount was set to 82: https://en.wikipedia.org/wiki/NMEA_0183#Message_structure
@@ -77,38 +54,6 @@ typedef enum
     UM980_RESULT_RESPONSE_COMMAND_ERROR,
     UM980_RESULT_RESPONSE_COMMAND_WAITING,
 } Um980Result;
-
-// Depending on the sentence type the processor will load characters into different arrays
-enum
-{
-    SFE_SENTENCE_TYPE_NONE = 0,
-    SFE_SENTENCE_TYPE_NMEA,
-    SFE_SENTENCE_TYPE_UNICORE_COMMAND_RESPONSE,
-    SFE_SENTENCE_TYPE_UNICORE_POUND_RESPONSE,
-    SFE_SENTENCE_TYPE_UNICORE_BINARY,
-    SFE_SENTENCE_TYPE_UNICORE_ASCII,
-    SFE_SENTENCE_TYPE_RTCM,
-};
-
-enum
-{
-    PARSE_STATE_WAITING_FOR_PREAMBLE = 0,
-    PARSE_STATE_NMEA_FIRST_COMMA,
-    PARSE_STATE_NMEA_FIND_ASTERISK,
-    PARSE_STATE_NMEA_CHECKSUM1,
-    PARSE_STATE_NMEA_CHECKSUM2,
-    PARSE_STATE_NMEA_TERMINATION,
-    PARSE_STATE_UNICORE_SYNC2,
-    PARSE_STATE_UNICORE_SYNC3,
-    PARSE_STATE_UNICORE_READ_LENGTH,
-    PARSE_STATE_UNICORE_READ_DATA,
-    PARSE_STATE_RTCM_LENGTH1,
-    PARSE_STATE_RTCM_LENGTH2,
-    PARSE_STATE_RTCM_MESSAGE1,
-    PARSE_STATE_RTCM_MESSAGE2,
-    PARSE_STATE_RTCM_DATA,
-    PARSE_STATE_RTCM_CRC,
-};
 
 const uint8_t um980BinarySyncA = 0xAA;
 const uint8_t um980BinarySyncB = 0x44;
@@ -185,45 +130,10 @@ class UM980
 {
   private:
     const uint16_t dataFreshLimit_ms = 2000;
-    unsigned long lastGetGeodetic = 0;
+    unsigned long lastUpdateGeodetic = 0;
     unsigned long lastUpdateEcef = 0;
     unsigned long lastUpdateDateTime = 0;
 
-    double latitude = 0;
-    double longitude = 0;
-    double altitude = 0;
-    float latitudeDeviation = 0;
-    float longitudeDeviation = 0;
-    float heightDeviation = 0;
-
-    double ecefX = 0;
-    double ecefY = 0;
-    double ecefZ = 0;
-    float ecefXDeviation = 0;
-    float ecefYDeviation = 0;
-    float ecefZDeviation = 0;
-
-    uint8_t satellitesTracked = 0;
-    uint8_t satellitesUsed = 0;
-    uint8_t solutionStatus =
-        0; // 0 = Solution computed, 1 = Insufficient observation, 3 = No convergence, 4 = Covariance trace
-    uint8_t positionType = 0; // 0 = None, 1 = FixedPos, 8 = DopplerVelocity, 16 = Single, ...
-    uint8_t rtkSolution = 0;
-    uint8_t pseudorangeCorrection = 0;
-
-    uint16_t year = 0;
-    uint8_t month = 0;
-    uint8_t day = 0;
-    uint8_t hour = 0;
-    uint8_t minute = 0;
-    uint8_t second = 0;
-    uint16_t millisecond = 0;
-    uint8_t timeStatus = 3; // 0 = valid, 3 = invalid
-    uint8_t dateStatus = 0; // 0 = Invalid, 1 = valid, 2 = leap second warning
-    double timeOffset = 0;
-    double timeDeviation = 0;
-
-    bool staleGeodetic();
     bool staleDateTime();
     bool staleEcef();
 
@@ -234,34 +144,7 @@ class UM980
     Print *_debugPort = nullptr; // The stream to send debug messages to if enabled. Usually Serial.
 
     void debugPrintf(const char *format, ...);
-
-    PARSE_STATE parse = {PARSE_STATE_WAITING_FOR_PREAMBLE};
-    char commandName[20] = ""; //Passes the command type into parser
-    uint8_t commandResponse = UM980_RESULT_OK; //Gets EOM result from parser
-
-    void waitForPreamble(PARSE_STATE *parse, uint8_t data);
-
-    void nmeaFindFirstComma(PARSE_STATE *parse, uint8_t data);
-    void nmeaFindAsterisk(PARSE_STATE *parse, uint8_t data);
-    void nmeaChecksumByte1(PARSE_STATE *parse, uint8_t data);
-    void nmeaChecksumByte2(PARSE_STATE *parse, uint8_t data);
-    void nmeaLineTermination(PARSE_STATE *parse, uint8_t data);
-    int AsciiToNibble(int data);
-
-    // void unicoreBinarySync2(PARSE_STATE *parse, uint8_t data);
-    // void unicoreBinarySync3(PARSE_STATE *parse, uint8_t data);
-    // void unicoreBinaryReadLength(PARSE_STATE *parse, uint8_t data);
-    // void unicoreReadData(PARSE_STATE *parse, uint8_t data);
-
-    // void rtcmReadLength1(PARSE_STATE *parse, uint8_t data);
-    // void rtcmReadLength2(PARSE_STATE *parse, uint8_t data);
-    // void rtcmReadMessage1(PARSE_STATE *parse, uint8_t data);
-    // void rtcmReadMessage2(PARSE_STATE *parse, uint8_t data);
-    // void rtcmReadData(PARSE_STATE *parse, uint8_t data);
-    // void rtcmReadCrc(PARSE_STATE *parse, uint8_t data);
-
-    void eomHandler(PARSE_STATE *parse);
-
+    
   protected:
     HardwareSerial *_hwSerialPort = nullptr;
 
@@ -273,6 +156,9 @@ class UM980
 
     void enableDebugging(Print &debugPort = Serial);
     void disableDebugging();
+
+    char commandName[20] = "";                 // Passes the command type into parser
+    uint8_t commandResponse = UM980_RESULT_OK; // Gets EOM result from parser
 
     // Mode
     bool setMode(const char *modeType);
@@ -329,14 +215,7 @@ class UM980
     Um980Result sendQuery(const char *command, char *response, int *maxResponseLength, uint16_t maxWaitMs = 1500);
 
     Um980Result sendString(const char *command, uint16_t maxWaitMs = 1500);
-    Um980Result scanForCharacter(uint8_t characterToFind, uint16_t maxWaitMs);
-    Um980Result getResponseAscii(uint8_t characterToFind, char *response, uint16_t *maxResponseLength,
-                                 bool multiLineResponse = false, uint16_t maxWaitMs = 1500);
-    Um980Result getResponseBinary(const char *command, uint8_t *response, uint16_t *maxResponseLength,
-                                  uint16_t maxWaitMs);
-    Um980Result checkChecksum(char *response);
     Um980Result checkCRC(char *response);
-    uint32_t calculateCRC32(uint8_t *charBuffer, uint16_t bufferSize);
 
     // Main helper functions
     double getLatitude(uint16_t maxWaitMs = 1500);
@@ -375,17 +254,20 @@ class UM980
 
     uint32_t getFixAgeMilliseconds(); // Based on Geodetic report
 
-    bool initPacketUNIBESTNAV();
-    // UBX_NAV_PVT_t *packetUBXNAVPVT = nullptr;
-    UNICORE_BESTNAV_t *packetUNIBESTNAV =
+    void unicoreHandler(uint8_t *data, uint16_t length);
+
+    bool initBestnav(uint8_t rate = 1);
+    UNICORE_BESTNAV_t *packetBESTNAV =
         nullptr; // Pointer to struct. RAM will be allocated for this if/when necessary
 
-  protected:
-    int8_t unicoreBinaryByteCounter; // Tracks a binary Unicore message
+    bool initBestnavXyz(uint8_t rate = 1);
+    UNICORE_BESTNAVXYZ_t *packetBESTNAVXYZ =
+        nullptr; // Pointer to struct. RAM will be allocated for this if/when necessary
 
-    int8_t nmeaByteCounter; // Count all NMEA message bytes.
-    int8_t maxNMEAByteCount = SFE_UM980_MAX_NMEA_BYTE_COUNT;
-    uint16_t parserFailedMessage_NMEA = 0;
+    bool initRectime(uint8_t rate = 1);
+    UNICORE_RECTIME_t *packetRECTIME =
+        nullptr; // Pointer to struct. RAM will be allocated for this if/when necessary
+
 };
 
 #endif //_SPARKFUN_UNICORE_GNSS_ARDUINO_LIBRARY_H
