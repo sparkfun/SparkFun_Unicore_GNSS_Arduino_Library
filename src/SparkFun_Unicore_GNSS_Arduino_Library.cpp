@@ -78,7 +78,7 @@
 
 UM980 *ptrUM980 = nullptr; // Global pointer for external parser access into library class
 
-PARSE_STATE parse = {PARSE_STATE_WAITING_FOR_PREAMBLE};
+UNICORE_PARSE_STATE parse = {UNICORE_PARSE_STATE_WAITING_FOR_PREAMBLE};
 
 bool UM980::begin(HardwareSerial &serialPort)
 {
@@ -167,56 +167,56 @@ bool UM980::updateOnce()
         default:
             Serial.printf("Case not found! : %d\r\n", parse.state);
             // Drop to waiting for preamble
-        case (PARSE_STATE_WAITING_FOR_PREAMBLE):
-            waitForPreamble(&parse, incoming);
+        case (UNICORE_PARSE_STATE_WAITING_FOR_PREAMBLE):
+            um980WaitForPreamble(&parse, incoming);
             break;
 
-        case (PARSE_STATE_NMEA_FIRST_COMMA):
-            nmeaFindFirstComma(&parse, incoming);
+        case (UNICORE_PARSE_STATE_NMEA_FIRST_COMMA):
+            um980NmeaFindFirstComma(&parse, incoming);
             break;
-        case (PARSE_STATE_NMEA_FIND_ASTERISK):
-            nmeaFindAsterisk(&parse, incoming);
+        case (UNICORE_PARSE_STATE_NMEA_FIND_ASTERISK):
+            um980NmeaFindAsterisk(&parse, incoming);
             break;
-        case (PARSE_STATE_NMEA_CHECKSUM1):
-            nmeaChecksumByte1(&parse, incoming);
+        case (UNICORE_PARSE_STATE_NMEA_CHECKSUM1):
+            um980NmeaChecksumByte1(&parse, incoming);
             break;
-        case (PARSE_STATE_NMEA_CHECKSUM2):
-            nmeaChecksumByte2(&parse, incoming);
+        case (UNICORE_PARSE_STATE_NMEA_CHECKSUM2):
+            um980NmeaChecksumByte2(&parse, incoming);
             break;
-        case (PARSE_STATE_NMEA_TERMINATION):
-            nmeaLineTermination(&parse, incoming);
-            break;
-
-        case (PARSE_STATE_UNICORE_SYNC2):
-            unicoreBinarySync2(&parse, incoming);
-            break;
-        case (PARSE_STATE_UNICORE_SYNC3):
-            unicoreBinarySync3(&parse, incoming);
-            break;
-        case (PARSE_STATE_UNICORE_READ_LENGTH):
-            unicoreBinaryReadLength(&parse, incoming);
-            break;
-        case (PARSE_STATE_UNICORE_READ_DATA):
-            unicoreReadData(&parse, incoming);
+        case (UNICORE_PARSE_STATE_NMEA_TERMINATION):
+            um980NmeaLineTermination(&parse, incoming);
             break;
 
-        case (PARSE_STATE_RTCM_LENGTH1):
-            rtcmReadLength1(&parse, incoming);
+        case (UNICORE_PARSE_STATE_UNICORE_SYNC2):
+            um980UnicoreBinarySync2(&parse, incoming);
             break;
-        case (PARSE_STATE_RTCM_LENGTH2):
-            rtcmReadLength2(&parse, incoming);
+        case (UNICORE_PARSE_STATE_UNICORE_SYNC3):
+            um980UnicoreBinarySync3(&parse, incoming);
             break;
-        case (PARSE_STATE_RTCM_MESSAGE1):
-            rtcmReadMessage1(&parse, incoming);
+        case (UNICORE_PARSE_STATE_UNICORE_READ_LENGTH):
+            um980UnicoreBinaryReadLength(&parse, incoming);
             break;
-        case (PARSE_STATE_RTCM_MESSAGE2):
-            rtcmReadMessage2(&parse, incoming);
+        case (UNICORE_PARSE_STATE_UNICORE_READ_DATA):
+            um980UnicoreReadData(&parse, incoming);
             break;
-        case (PARSE_STATE_RTCM_DATA):
-            rtcmReadData(&parse, incoming);
+
+        case (UNICORE_PARSE_STATE_RTCM_LENGTH1):
+            um980RtcmReadLength1(&parse, incoming);
             break;
-        case (PARSE_STATE_RTCM_CRC):
-            rtcmReadCrc(&parse, incoming);
+        case (UNICORE_PARSE_STATE_RTCM_LENGTH2):
+            um980RtcmReadLength2(&parse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_RTCM_MESSAGE1):
+            um980RtcmReadMessage1(&parse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_RTCM_MESSAGE2):
+            um980RtcmReadMessage2(&parse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_RTCM_DATA):
+            um980RtcmReadData(&parse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_RTCM_CRC):
+            um980RtcmReadCrc(&parse, incoming);
             break;
         }
         return (true);

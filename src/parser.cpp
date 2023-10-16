@@ -7,7 +7,7 @@ extern UM980 *ptrUM980; // Global pointer for external parser access into librar
 // If it's a response to a command, is it OK or BAD? $command,badResponse,response:
 // PARSING FAILD NO MATCHING FUNC BADRESPONSE*40
 // If it's Unicore binary, load into target variables If it's NMEA or RTCM, discard
-void eomHandler(PARSE_STATE *parse)
+void eomHandler(UNICORE_PARSE_STATE *parse)
 {
     // Switch on message type (NMEA, RTCM, Unicore Binary, etc)
 
@@ -67,7 +67,7 @@ void eomHandler(PARSE_STATE *parse)
     }
 }
 
-void waitForPreamble(PARSE_STATE *parse, uint8_t data)
+void um980WaitForPreamble(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     // Verify that this is the preamble byte
     switch (data)
@@ -95,7 +95,7 @@ void waitForPreamble(PARSE_STATE *parse, uint8_t data)
 
         parse->check = 0;
         parse->nmeaMessageNameLength = 0;
-        parse->state = PARSE_STATE_NMEA_FIRST_COMMA;
+        parse->state = UNICORE_PARSE_STATE_NMEA_FIRST_COMMA;
         return;
 
     case 0xD3:
@@ -115,7 +115,7 @@ void waitForPreamble(PARSE_STATE *parse, uint8_t data)
         //
 
         // Start the CRC with this byte
-        parse->state = PARSE_STATE_RTCM_LENGTH1;
+        parse->state = UNICORE_PARSE_STATE_RTCM_LENGTH1;
         return;
 
     case 0xAA:
@@ -134,17 +134,17 @@ void waitForPreamble(PARSE_STATE *parse, uint8_t data)
         //    |<------------------------ CRC --------------->|
         //
 
-        parse->state = PARSE_STATE_UNICORE_SYNC2;
+        parse->state = UNICORE_PARSE_STATE_UNICORE_SYNC2;
         return;
     }
 
     // Preamble byte not found
     parse->length = 0;
-    parse->state = PARSE_STATE_WAITING_FOR_PREAMBLE;
+    parse->state = UNICORE_PARSE_STATE_WAITING_FOR_PREAMBLE;
 }
 
 // Read the message name
-void nmeaFindFirstComma(PARSE_STATE *parse, uint8_t data)
+void um980NmeaFindFirstComma(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     parse->check ^= data;
     if ((data != ',') || (parse->nmeaMessageNameLength == 0))
@@ -159,35 +159,35 @@ void nmeaFindFirstComma(PARSE_STATE *parse, uint8_t data)
     {
         // Zero terminate the message name
         parse->nmeaMessageName[parse->nmeaMessageNameLength++] = 0;
-        parse->state = PARSE_STATE_NMEA_FIND_ASTERISK; // Move to next state
+        parse->state = UNICORE_PARSE_STATE_NMEA_FIND_ASTERISK; // Move to next state
     }
 }
 
 // Read the message data
-void nmeaFindAsterisk(PARSE_STATE *parse, uint8_t data)
+void um980NmeaFindAsterisk(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     if (data != '*')
         parse->check ^= data;
     else
-        parse->state = PARSE_STATE_NMEA_CHECKSUM1; // Move to next state
+        parse->state = UNICORE_PARSE_STATE_NMEA_CHECKSUM1; // Move to next state
 }
 
 // Read the first checksum byte
-void nmeaChecksumByte1(PARSE_STATE *parse, uint8_t data)
+void um980NmeaChecksumByte1(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
-    parse->state = PARSE_STATE_NMEA_CHECKSUM2; // Move to next state
+    parse->state = UNICORE_PARSE_STATE_NMEA_CHECKSUM2; // Move to next state
 }
 
 // Read the second checksum byte
-void nmeaChecksumByte2(PARSE_STATE *parse, uint8_t data)
+void um980NmeaChecksumByte2(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     parse->nmeaLength = parse->length;
     parse->bytesRemaining = 2;
-    parse->state = PARSE_STATE_NMEA_TERMINATION; // Move to next state
+    parse->state = UNICORE_PARSE_STATE_NMEA_TERMINATION; // Move to next state
 }
 
 // Read the line termination
-void nmeaLineTermination(PARSE_STATE *parse, uint8_t data)
+void um980NmeaLineTermination(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     // We expect a \r\n termination, but may vary between receiver types
     if (data == '\r' || data == '\n')
@@ -280,7 +280,7 @@ void nmeaLineTermination(PARSE_STATE *parse, uint8_t data)
                 eomHandler(parse);
 
                 parse->length = 0;
-                parse->state = PARSE_STATE_WAITING_FOR_PREAMBLE; // Move to next state
+                parse->state = UNICORE_PARSE_STATE_WAITING_FOR_PREAMBLE; // Move to next state
                 return;
             }
 
@@ -315,14 +315,14 @@ void nmeaLineTermination(PARSE_STATE *parse, uint8_t data)
             // We already have new data, process it immediately
             parse->length = 0;
             parse->buffer[parse->length++] = data;
-            parse->state = PARSE_STATE_WAITING_FOR_PREAMBLE; // Move to next state
-            return (waitForPreamble(parse, data));
+            parse->state = UNICORE_PARSE_STATE_WAITING_FOR_PREAMBLE; // Move to next state
+            return (um980WaitForPreamble(parse, data));
         }
         else
         {
             // We're done. Move on to waiting.
             parse->length = 0;
-            parse->state = PARSE_STATE_WAITING_FOR_PREAMBLE; // Move to next state
+            parse->state = UNICORE_PARSE_STATE_WAITING_FOR_PREAMBLE; // Move to next state
         }
     }
 }
@@ -340,7 +340,7 @@ int AsciiToNibble(int data)
 }
 
 // Read the second sync byte
-void unicoreBinarySync2(PARSE_STATE *parse, uint8_t data)
+void um980UnicoreBinarySync2(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     // Verify sync byte 2
     if (data != 0x44)
@@ -348,14 +348,14 @@ void unicoreBinarySync2(PARSE_STATE *parse, uint8_t data)
         // Invalid sync byte, place this byte at the beginning of the buffer
         parse->length = 0;
         parse->buffer[parse->length++] = data;
-        return (waitForPreamble(parse, data)); // Start searching for a preamble byte
+        return (um980WaitForPreamble(parse, data)); // Start searching for a preamble byte
     }
 
-    parse->state = PARSE_STATE_UNICORE_SYNC3; // Move on
+    parse->state = UNICORE_PARSE_STATE_UNICORE_SYNC3; // Move on
 }
 
 // Read the third sync byte
-void unicoreBinarySync3(PARSE_STATE *parse, uint8_t data)
+void um980UnicoreBinarySync3(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     // Verify sync byte 3
     if (data != 0xB5)
@@ -363,14 +363,14 @@ void unicoreBinarySync3(PARSE_STATE *parse, uint8_t data)
         // Invalid sync byte, place this byte at the beginning of the buffer
         parse->length = 0;
         parse->buffer[parse->length++] = data;
-        return (waitForPreamble(parse, data)); // Start searching for a preamble byte
+        return (um980WaitForPreamble(parse, data)); // Start searching for a preamble byte
     }
 
-    parse->state = PARSE_STATE_UNICORE_READ_LENGTH; // Move on
+    parse->state = UNICORE_PARSE_STATE_UNICORE_READ_LENGTH; // Move on
 }
 
 // Read the message length
-void unicoreBinaryReadLength(PARSE_STATE *parse, uint8_t data)
+void um980UnicoreBinaryReadLength(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     if (parse->length == offsetHeaderMessageLength + 2)
     {
@@ -390,17 +390,17 @@ void unicoreBinaryReadLength(PARSE_STATE *parse, uint8_t data)
             parse->buffer[parse->length++] = data;
 
             // Start searching for a preamble byte
-            return waitForPreamble(parse, data);
+            return um980WaitForPreamble(parse, data);
         }
 
         // Account for the bytes already received
         parse->bytesRemaining -= parse->length;
-        parse->state = PARSE_STATE_UNICORE_READ_DATA; // Move on
+        parse->state = UNICORE_PARSE_STATE_UNICORE_READ_DATA; // Move on
     }
 }
 
 // Read the message content until we reach the end, then check CRC
-void unicoreReadData(PARSE_STATE *parse, uint8_t data)
+void um980UnicoreReadData(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     // Account for this data byte
     parse->bytesRemaining -= 1;
@@ -434,7 +434,7 @@ void unicoreReadData(PARSE_STATE *parse, uint8_t data)
 
     // Search for another preamble byte
     parse->length = 0;
-    parse->state = PARSE_STATE_WAITING_FOR_PREAMBLE; // Move on
+    parse->state = UNICORE_PARSE_STATE_WAITING_FOR_PREAMBLE; // Move on
 }
 
 // Calculate and return the CRC of the given buffer
@@ -447,7 +447,7 @@ uint32_t calculateCRC32(uint8_t *charBuffer, uint16_t bufferSize)
 }
 
 // Read the upper two bits of the length
-void rtcmReadLength1(PARSE_STATE *parse, uint8_t data)
+void um980RtcmReadLength1(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     // Verify the length byte - check the 6 MS bits are all zero
     if (data & (~3))
@@ -457,16 +457,16 @@ void rtcmReadLength1(PARSE_STATE *parse, uint8_t data)
         parse->buffer[parse->length++] = data;
 
         // Start searching for a preamble byte
-        return waitForPreamble(parse, data);
+        return um980WaitForPreamble(parse, data);
     }
 
     // Save the upper 2 bits of the length
     parse->bytesRemaining = data << 8;
-    parse->state = PARSE_STATE_RTCM_LENGTH2;
+    parse->state = UNICORE_PARSE_STATE_RTCM_LENGTH2;
 }
 
 // Read the lower 8 bits of the length
-void rtcmReadLength2(PARSE_STATE *parse, uint8_t data)
+void um980RtcmReadLength2(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     parse->bytesRemaining |= data;
 
@@ -480,28 +480,28 @@ void rtcmReadLength2(PARSE_STATE *parse, uint8_t data)
         parse->buffer[parse->length++] = data;
 
         // Start searching for a preamble byte
-        return waitForPreamble(parse, data);
+        return um980WaitForPreamble(parse, data);
     }
 
-    parse->state = PARSE_STATE_RTCM_MESSAGE1;
+    parse->state = UNICORE_PARSE_STATE_RTCM_MESSAGE1;
 }
 
 // Read the upper 8 bits of the message number
-void rtcmReadMessage1(PARSE_STATE *parse, uint8_t data)
+void um980RtcmReadMessage1(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     parse->bytesRemaining -= 1;
-    parse->state = PARSE_STATE_RTCM_MESSAGE2;
+    parse->state = UNICORE_PARSE_STATE_RTCM_MESSAGE2;
 }
 
 // Read the lower 4 bits of the message number
-void rtcmReadMessage2(PARSE_STATE *parse, uint8_t data)
+void um980RtcmReadMessage2(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     parse->bytesRemaining -= 1;
-    parse->state = PARSE_STATE_RTCM_DATA;
+    parse->state = UNICORE_PARSE_STATE_RTCM_DATA;
 }
 
 // Read the rest of the message
-void rtcmReadData(PARSE_STATE *parse, uint8_t data)
+void um980RtcmReadData(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     // Account for this data byte
     parse->bytesRemaining -= 1;
@@ -510,12 +510,12 @@ void rtcmReadData(PARSE_STATE *parse, uint8_t data)
     if (parse->bytesRemaining <= 0)
     {
         parse->bytesRemaining = 3;
-        parse->state = PARSE_STATE_RTCM_CRC;
+        parse->state = UNICORE_PARSE_STATE_RTCM_CRC;
     }
 }
 
 // Read the CRC
-void rtcmReadCrc(PARSE_STATE *parse, uint8_t data)
+void um980RtcmReadCrc(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     // Account for this data byte
     parse->bytesRemaining -= 1;
@@ -556,5 +556,5 @@ void rtcmReadCrc(PARSE_STATE *parse, uint8_t data)
 
     // Search for another preamble byte
     parse->length = 0;
-    parse->state = PARSE_STATE_WAITING_FOR_PREAMBLE;
+    parse->state = UNICORE_PARSE_STATE_WAITING_FOR_PREAMBLE;
 }

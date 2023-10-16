@@ -19,29 +19,29 @@ enum
 
 enum
 {
-    PARSE_STATE_WAITING_FOR_PREAMBLE = 0,
-    PARSE_STATE_NMEA_FIRST_COMMA,
-    PARSE_STATE_NMEA_FIND_ASTERISK,
-    PARSE_STATE_NMEA_CHECKSUM1,
-    PARSE_STATE_NMEA_CHECKSUM2,
-    PARSE_STATE_NMEA_TERMINATION,
-    PARSE_STATE_UNICORE_SYNC2,
-    PARSE_STATE_UNICORE_SYNC3,
-    PARSE_STATE_UNICORE_READ_LENGTH,
-    PARSE_STATE_UNICORE_READ_DATA,
-    PARSE_STATE_RTCM_LENGTH1,
-    PARSE_STATE_RTCM_LENGTH2,
-    PARSE_STATE_RTCM_MESSAGE1,
-    PARSE_STATE_RTCM_MESSAGE2,
-    PARSE_STATE_RTCM_DATA,
-    PARSE_STATE_RTCM_CRC,
+    UNICORE_PARSE_STATE_WAITING_FOR_PREAMBLE = 0,
+    UNICORE_PARSE_STATE_NMEA_FIRST_COMMA,
+    UNICORE_PARSE_STATE_NMEA_FIND_ASTERISK,
+    UNICORE_PARSE_STATE_NMEA_CHECKSUM1,
+    UNICORE_PARSE_STATE_NMEA_CHECKSUM2,
+    UNICORE_PARSE_STATE_NMEA_TERMINATION,
+    UNICORE_PARSE_STATE_UNICORE_SYNC2,
+    UNICORE_PARSE_STATE_UNICORE_SYNC3,
+    UNICORE_PARSE_STATE_UNICORE_READ_LENGTH,
+    UNICORE_PARSE_STATE_UNICORE_READ_DATA,
+    UNICORE_PARSE_STATE_RTCM_LENGTH1,
+    UNICORE_PARSE_STATE_RTCM_LENGTH2,
+    UNICORE_PARSE_STATE_RTCM_MESSAGE1,
+    UNICORE_PARSE_STATE_RTCM_MESSAGE2,
+    UNICORE_PARSE_STATE_RTCM_DATA,
+    UNICORE_PARSE_STATE_RTCM_CRC,
 };
 
-typedef struct _PARSE_STATE *P_PARSE_STATE;
+typedef struct _UNICORE_PARSE_STATE *P_PARSE_STATE;
 
 #define PARSE_BUFFER_LENGTH 1000 // Some responses (CONFIG) can be ~780 bytes
 
-typedef struct _PARSE_STATE
+typedef struct _UNICORE_PARSE_STATE
 {
     //PARSE_ROUTINE state;                 // Parser state routine
     uint8_t state;
@@ -54,31 +54,31 @@ typedef struct _PARSE_STATE
     uint16_t nmeaLength;           // Length of the NMEA message without line termination
     uint8_t nmeaMessageName[16];   // Message name
     uint8_t nmeaMessageNameLength; // Length of the message name
-} PARSE_STATE;
+} UNICORE_PARSE_STATE;
 
-void waitForPreamble(PARSE_STATE *parse, uint8_t data);
+void um980WaitForPreamble(UNICORE_PARSE_STATE *parse, uint8_t data);
 
-void nmeaFindFirstComma(PARSE_STATE *parse, uint8_t data);
-void nmeaFindAsterisk(PARSE_STATE *parse, uint8_t data);
-void nmeaChecksumByte1(PARSE_STATE *parse, uint8_t data);
-void nmeaChecksumByte2(PARSE_STATE *parse, uint8_t data);
-void nmeaLineTermination(PARSE_STATE *parse, uint8_t data);
+void um980NmeaFindFirstComma(UNICORE_PARSE_STATE *parse, uint8_t data);
+void um980NmeaFindAsterisk(UNICORE_PARSE_STATE *parse, uint8_t data);
+void um980NmeaChecksumByte1(UNICORE_PARSE_STATE *parse, uint8_t data);
+void um980NmeaChecksumByte2(UNICORE_PARSE_STATE *parse, uint8_t data);
+void um980NmeaLineTermination(UNICORE_PARSE_STATE *parse, uint8_t data);
 int AsciiToNibble(int data);
 
-void unicoreBinarySync2(PARSE_STATE *parse, uint8_t data);
-void unicoreBinarySync3(PARSE_STATE *parse, uint8_t data);
-void unicoreBinaryReadLength(PARSE_STATE *parse, uint8_t data);
-void unicoreReadData(PARSE_STATE *parse, uint8_t data);
+void um980UnicoreBinarySync2(UNICORE_PARSE_STATE *parse, uint8_t data);
+void um980UnicoreBinarySync3(UNICORE_PARSE_STATE *parse, uint8_t data);
+void um980UnicoreBinaryReadLength(UNICORE_PARSE_STATE *parse, uint8_t data);
+void um980UnicoreReadData(UNICORE_PARSE_STATE *parse, uint8_t data);
 uint32_t calculateCRC32(uint8_t *charBuffer, uint16_t bufferSize);
 
-void rtcmReadLength1(PARSE_STATE *parse, uint8_t data);
-void rtcmReadLength2(PARSE_STATE *parse, uint8_t data);
-void rtcmReadMessage1(PARSE_STATE *parse, uint8_t data);
-void rtcmReadMessage2(PARSE_STATE *parse, uint8_t data);
-void rtcmReadData(PARSE_STATE *parse, uint8_t data);
-void rtcmReadCrc(PARSE_STATE *parse, uint8_t data);
+void um980RtcmReadLength1(UNICORE_PARSE_STATE *parse, uint8_t data);
+void um980RtcmReadLength2(UNICORE_PARSE_STATE *parse, uint8_t data);
+void um980RtcmReadMessage1(UNICORE_PARSE_STATE *parse, uint8_t data);
+void um980RtcmReadMessage2(UNICORE_PARSE_STATE *parse, uint8_t data);
+void um980RtcmReadData(UNICORE_PARSE_STATE *parse, uint8_t data);
+void um980RtcmReadCrc(UNICORE_PARSE_STATE *parse, uint8_t data);
 
-void eomHandler(PARSE_STATE *parse);
+void eomHandler(UNICORE_PARSE_STATE *parse);
 
 //From Unicore Reference Command Manual
 const unsigned long crc32Table[256] = {
