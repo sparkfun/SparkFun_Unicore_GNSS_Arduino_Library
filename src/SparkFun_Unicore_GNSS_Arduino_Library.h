@@ -211,8 +211,7 @@ class UM980
     void clearBuffer();
 
     bool sendCommand(const char *command, uint16_t maxWaitMs = 1500);
-    Um980Result sendQuery(const char *command, char *response, uint16_t *maxResponseLength, uint16_t maxWaitMs = 1500);
-    Um980Result sendQuery(const char *command, char *response, int *maxResponseLength, uint16_t maxWaitMs = 1500);
+    Um980Result sendQuery(const char *command, uint16_t maxWaitMs = 1500);
     Um980Result sendString(const char *command, uint16_t maxWaitMs = 1500);
     Um980Result checkCRC(char *response);
 

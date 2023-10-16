@@ -4,7 +4,6 @@
 extern UM980 *ptrUM980; // Global pointer for external parser access into library class
 
 // End of message handler
-// Crack the response into various endpoints
 // If it's a response to a command, is it OK or BAD? $command,badResponse,response:
 // PARSING FAILD NO MATCHING FUNC BADRESPONSE*40
 // If it's Unicore binary, load into target variables If it's NMEA or RTCM, discard
@@ -38,37 +37,33 @@ void eomHandler(PARSE_STATE *parse)
     }
     else if (parse->messageType == SFE_SENTENCE_TYPE_UNICORE_POUND_RESPONSE)
     {
-        Serial.println("Handling Unicore pound response");
+        // Serial.println("Handling Unicore pound response");
 
-        Serial.printf("parse->nmeaMessageName: %s\r\n", (char *)parse->nmeaMessageName);
+        // Serial.printf("parse->nmeaMessageName: %s\r\n", (char *)parse->nmeaMessageName);
 
         // Does this response contain the command we are looking for?
         if (strcasecmp((char *)parse->nmeaMessageName, ptrUM980->commandName) == 0) // Found
-        {
-            Serial.println("Command name matches");
-
             ptrUM980->commandResponse = UM980_RESULT_RESPONSE_COMMAND_OK;
-        }
     }
     else if (parse->messageType == SFE_SENTENCE_TYPE_NMEA)
     {
-        //Serial.println("NMEA handler");
+        // Serial.println("NMEA handler");
 
         // ID the NMEA message type
 
         // Serial.print("NMEA Handler: ");
         // for (int x = 0; x < parse->length; x++)
         //     Serial.write(parse->buffer[x]);
-        //Serial.println();
+        // Serial.println();
     }
     else if (parse->messageType == SFE_SENTENCE_TYPE_UNICORE_BINARY)
     {
         ptrUM980->unicoreHandler(parse->buffer, parse->length);
-        //Serial.println("Unicore handler");
+        // Serial.println("Unicore handler");
     }
     else if (parse->messageType == SFE_SENTENCE_TYPE_RTCM)
     {
-        Serial.println("RTCM handler");
+        // Serial.println("RTCM handler");
     }
 }
 
@@ -99,7 +94,6 @@ void waitForPreamble(PARSE_STATE *parse, uint8_t data)
         //    Use the same NMEA parser
 
         parse->check = 0;
-        parse->computeCrc = false;
         parse->nmeaMessageNameLength = 0;
         parse->state = PARSE_STATE_NMEA_FIRST_COMMA;
         return;
@@ -120,12 +114,7 @@ void waitForPreamble(PARSE_STATE *parse, uint8_t data)
         //    |<------------------------ CRC -------------------------->|
         //
 
-        Serial.println("rtcm");
-
         // Start the CRC with this byte
-        parse->check = 0;
-        parse->check = COMPUTE_CRC24Q(parse, data);
-        parse->computeCrc = true;
         parse->state = PARSE_STATE_RTCM_LENGTH1;
         return;
 
@@ -145,11 +134,13 @@ void waitForPreamble(PARSE_STATE *parse, uint8_t data)
         //    |<------------------------ CRC --------------->|
         //
 
-        parse->length = 0;
-        parse->buffer[parse->length++] = data; // This byte is part of the CRC
         parse->state = PARSE_STATE_UNICORE_SYNC2;
         return;
     }
+
+    // Preamble byte not found
+    parse->length = 0;
+    parse->state = PARSE_STATE_WAITING_FOR_PREAMBLE;
 }
 
 // Read the message name
@@ -198,8 +189,6 @@ void nmeaChecksumByte2(PARSE_STATE *parse, uint8_t data)
 // Read the line termination
 void nmeaLineTermination(PARSE_STATE *parse, uint8_t data)
 {
-    int checksum;
-
     // We expect a \r\n termination, but may vary between receiver types
     if (data == '\r' || data == '\n')
     {
@@ -214,7 +203,7 @@ void nmeaLineTermination(PARSE_STATE *parse, uint8_t data)
             parse->length--;
 
         // Convert the checksum characters into binary
-        checksum = AsciiToNibble(parse->buffer[parse->nmeaLength - 2]) << 4;
+        int checksum = AsciiToNibble(parse->buffer[parse->nmeaLength - 2]) << 4;
         checksum |= AsciiToNibble(parse->buffer[parse->nmeaLength - 1]);
 
         parse->messageType = SFE_SENTENCE_TYPE_NMEA;
@@ -289,6 +278,8 @@ void nmeaLineTermination(PARSE_STATE *parse, uint8_t data)
             {
                 // Serial.println("nmeaTermination Returning after EOM handler");
                 eomHandler(parse);
+
+                parse->length = 0;
                 parse->state = PARSE_STATE_WAITING_FOR_PREAMBLE; // Move to next state
                 return;
             }
@@ -390,6 +381,18 @@ void unicoreBinaryReadLength(PARSE_STATE *parse, uint8_t data)
         // The overall message length is header (24) + data (expectedLength) + CRC (4)
         parse->bytesRemaining = um980HeaderLength + expectedLength + 4;
 
+        if (parse->bytesRemaining > PARSE_BUFFER_LENGTH)
+        {
+            Serial.println("Length overflow");
+
+            // Invalid length, place this byte at the beginning of the buffer
+            parse->length = 0;
+            parse->buffer[parse->length++] = data;
+
+            // Start searching for a preamble byte
+            return waitForPreamble(parse, data);
+        }
+
         // Account for the bytes already received
         parse->bytesRemaining -= parse->length;
         parse->state = PARSE_STATE_UNICORE_READ_DATA; // Move on
@@ -439,7 +442,7 @@ uint32_t calculateCRC32(uint8_t *charBuffer, uint16_t bufferSize)
 {
     uint32_t crc = 0;
     for (uint16_t x = 0; x < bufferSize; x++)
-        crc = crcTable32[(crc ^ charBuffer[x]) & 0xFF] ^ (crc >> 8);
+        crc = crc32Table[(crc ^ charBuffer[x]) & 0xFF] ^ (crc >> 8);
     return crc;
 }
 
@@ -452,7 +455,6 @@ void rtcmReadLength1(PARSE_STATE *parse, uint8_t data)
         // Invalid length, place this byte at the beginning of the buffer
         parse->length = 0;
         parse->buffer[parse->length++] = data;
-        parse->computeCrc = false;
 
         // Start searching for a preamble byte
         return waitForPreamble(parse, data);
@@ -467,13 +469,26 @@ void rtcmReadLength1(PARSE_STATE *parse, uint8_t data)
 void rtcmReadLength2(PARSE_STATE *parse, uint8_t data)
 {
     parse->bytesRemaining |= data;
+
+    // Check the length
+    if (parse->bytesRemaining > PARSE_BUFFER_LENGTH)
+    {
+        Serial.println("RTCM length overflow");
+
+        // Invalid length, place this byte at the beginning of the buffer
+        parse->length = 0;
+        parse->buffer[parse->length++] = data;
+
+        // Start searching for a preamble byte
+        return waitForPreamble(parse, data);
+    }
+
     parse->state = PARSE_STATE_RTCM_MESSAGE1;
 }
 
 // Read the upper 8 bits of the message number
 void rtcmReadMessage1(PARSE_STATE *parse, uint8_t data)
 {
-    parse->message = data << 4;
     parse->bytesRemaining -= 1;
     parse->state = PARSE_STATE_RTCM_MESSAGE2;
 }
@@ -481,7 +496,6 @@ void rtcmReadMessage1(PARSE_STATE *parse, uint8_t data)
 // Read the lower 4 bits of the message number
 void rtcmReadMessage2(PARSE_STATE *parse, uint8_t data)
 {
-    parse->message |= data >> 4;
     parse->bytesRemaining -= 1;
     parse->state = PARSE_STATE_RTCM_DATA;
 }
@@ -495,7 +509,6 @@ void rtcmReadData(PARSE_STATE *parse, uint8_t data)
     // Wait until all the data is received
     if (parse->bytesRemaining <= 0)
     {
-        // parse->rtcmCrc = parse->check & 0x00ffffff;
         parse->bytesRemaining = 3;
         parse->state = PARSE_STATE_RTCM_CRC;
     }
@@ -511,28 +524,37 @@ void rtcmReadCrc(PARSE_STATE *parse, uint8_t data)
     if (parse->bytesRemaining > 0)
         return;
 
-    // Update the maximum message length
-    if (parse->length > parse->maxLength)
-    {
-        parse->maxLength = parse->length;
-        // debugPrintf("RTCM parser error maxLength: %d bytes\r\n", parse->maxLength);
-    }
+    // Get CRC
+    uint32_t sentenceCRC = (parse->buffer[parse->length - 3] << 16) | (parse->buffer[parse->length - 2] << 8) |
+                           (parse->buffer[parse->length - 1] << 0);
 
+    // Calculate CRC
+    parse->check = 0;
+    for (int x = 0; x < parse->length - 3; x++) // Exclude CRC
+    {
+        parse->check = ((parse)->check << 8) ^ crc24q[parse->buffer[x] ^ (((parse)->check >> 16) & 0xff)];
+    }
     parse->check &= 0x00ffffff;
 
     // Process the message if CRC is valid
-    if (parse->check == 0)
+    if (parse->check == sentenceCRC)
     {
+        //Serial.printf("RTCM CRC Good length: %d\r\n", parse->length);
         parse->messageType = SFE_SENTENCE_TYPE_RTCM;
         eomHandler(parse);
     }
     else
     {
-        Serial.println("RTCM CRC failed");
+        Serial.printf("RTCM CRC failed length: %d sentence CRC: 0x%02X calc CRC: 0x%02X\r\n", parse->length,
+                      sentenceCRC, parse->check);
+        for (int x = 0; x < parse->length; x++)
+        {
+            Serial.write(parse->buffer[x]);
+        }
+        Serial.println();
     }
 
     // Search for another preamble byte
     parse->length = 0;
-    parse->computeCrc = false;
     parse->state = PARSE_STATE_WAITING_FOR_PREAMBLE;
 }

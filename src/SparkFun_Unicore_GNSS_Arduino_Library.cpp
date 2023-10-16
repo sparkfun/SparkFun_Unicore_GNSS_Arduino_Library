@@ -105,21 +105,22 @@ bool UM980::isConnected()
         serialPrintln("UNLOG"); // Blindly tell unit to stop transmitting
 
         // Wait until serial stops coming in
+        uint16_t maxTime = 500;
+        unsigned long startTime = millis();
         while (1)
         {
             delay(50);
+
             if (serialAvailable() == 0)
                 break;
             while (serialAvailable())
                 serialRead();
+
+            if(millis() - startTime > maxTime)
+                return (false);
         }
 
-        char response[200];
-
-        uint16_t maxResponseLength = sizeof(response);
-
-        // debugPrintf("UM980: Sending MODE query."); // Response to query should start with #
-        if (sendQuery("MODE", response, &maxResponseLength) == UM980_RESULT_OK)
+        if (sendQuery("MODE") == UM980_RESULT_OK)
             return (true);
         debugPrintf("UM980 failed to connect. Trying again.");
         delay(500);
@@ -628,15 +629,13 @@ bool UM980::sendCommand(const char *command, uint16_t maxWaitMs)
 
 //'$' begins the responses to commands, ie 'MODE ROVER', ends with OK
 // Contains reponse for caller
-Um980Result UM980::sendQuery(const char *command, char *response, uint16_t *maxResponseLength, uint16_t maxWaitMs)
+Um980Result UM980::sendQuery(const char *command, uint16_t maxWaitMs)
 {
     Um980Result result;
 
-    // Serial.println("Sending query");
-
     clearBuffer();
 
-    // Send command and check COMMAND OK response
+    // Send command and check for OK response
     result = sendString(command, maxWaitMs);
     if (result != UM980_RESULT_OK)
         return (result);
@@ -674,11 +673,6 @@ Um980Result UM980::sendQuery(const char *command, char *response, uint16_t *maxR
     // debugPrintf("Found OK to command");
 
     return (UM980_RESULT_OK);
-}
-
-Um980Result UM980::sendQuery(const char *command, char *response, int *maxResponseLength, uint16_t maxWaitMs)
-{
-    return (sendQuery(command, response, (uint16_t *)maxResponseLength, maxWaitMs));
 }
 
 // Send a string to the UM980
@@ -764,7 +758,7 @@ Um980Result UM980::checkCRC(char *response)
             break; // Exclude * from CRC
         }
 
-        calculatedCRC = crcTable[(calculatedCRC ^ response[packetLength]) & 0xFF] ^ (calculatedCRC >> 8);
+        calculatedCRC = crc32Table[(calculatedCRC ^ response[packetLength]) & 0xFF] ^ (calculatedCRC >> 8);
     }
 
     if (packetLength == strlen(response))
