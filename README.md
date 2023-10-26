@@ -19,6 +19,8 @@ Documentation
 --------------
 
 * **[Installing an Arduino Library Guide](https://learn.sparkfun.com/tutorials/installing-an-arduino-library)** - Basic information on how to install an Arduino library.
+  **[Hookup Guide]([Learn.SparkFun URL)](https://docs.sparkfun.com/SparkFun_UM980_Triband_GNSS_RTK_Breakout/)** - Basic hookup guide for the UM980.
+* **[Product Repoitory](https://github.com/sparkfun/SparkFun_UM980_Triband_GNSS_RTK_Breakout)** - Main repository (including hardware files) for the UM980.
 
 License Information
 -------------------
