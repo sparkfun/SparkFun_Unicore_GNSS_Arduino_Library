@@ -96,6 +96,12 @@ const uint16_t offsetBestnavHgtDeviation = 48;
 const uint16_t offsetBestnavSatsTracked = 64;
 const uint16_t offsetBestnavSatsUsed = 65;
 const uint16_t offsetBestnavExtSolStat = 69;
+const uint16_t offsetBestnavVelType = 76;
+const uint16_t offsetBestnavHorSpd = 88;
+const uint16_t offsetBestnavTrkGnd = 96;
+const uint16_t offsetBestnavVertSpd = 104;
+const uint16_t offsetBestnavVerspdStd = 112;
+const uint16_t offsetBestnavHorspdStd = 116;
 
 // BESTNAVXYZB
 const uint16_t messageIdBestnavXyz = 240;
@@ -143,8 +149,6 @@ class UM980
 
     Print *_debugPort = nullptr; // The stream to send debug messages to if enabled. Usually Serial.
 
-    void debugPrintf(const char *format, ...);
-
   protected:
     HardwareSerial *_hwSerialPort = nullptr;
 
@@ -154,6 +158,7 @@ class UM980
     bool update();
     bool updateOnce();
 
+    void debugPrintf(const char *format, ...);
     void enableDebugging(Print &debugPort = Serial);
     void disableDebugging();
 
@@ -219,9 +224,15 @@ class UM980
     double getLatitude(uint16_t maxWaitMs = 1500);
     double getLongitude();
     double getAltitude();
+    double getHorizontalSpeed();
+    double getVerticalSpeed();
+    double getTrackGround();
+
     float getLatitudeDeviation();
     float getLongitudeDeviation();
     float getAltitudeDeviation();
+    float getHorizontalSpeedDeviation();
+    float getVerticalSpeedDeviation();
 
     double getEcefX();
     double getEcefY();
@@ -231,10 +242,12 @@ class UM980
     float getEcefZDeviation();
 
     uint8_t getSIV();
-    uint8_t getSatellitesUsed();
     uint8_t getSatellitesTracked();
+    uint8_t getSatellitesUsed();
     uint8_t getSolutionStatus();
     uint8_t getPositionType();
+    uint8_t getVelocityType();
+
     uint8_t getRTKSolution();
     uint8_t getPseudorangeCorrection();
 

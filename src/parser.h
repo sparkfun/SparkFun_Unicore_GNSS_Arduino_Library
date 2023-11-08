@@ -37,15 +37,13 @@ enum
     UNICORE_PARSE_STATE_RTCM_CRC,
 };
 
-typedef struct _UNICORE_PARSE_STATE *P_PARSE_STATE;
-
-#define PARSE_BUFFER_LENGTH 1000 // Some responses (CONFIG) can be ~780 bytes
+#define UNICORE_PARSE_BUFFER_LENGTH 1000 // Some responses (CONFIG) can be ~780 bytes
 
 typedef struct _UNICORE_PARSE_STATE
 {
     //PARSE_ROUTINE state;                 // Parser state routine
     uint8_t state;
-    uint8_t buffer[PARSE_BUFFER_LENGTH]; // Buffer containing the message
+    uint8_t buffer[UNICORE_PARSE_BUFFER_LENGTH]; // Buffer containing the message
     uint16_t length;                     // Message length including line termination
     uint8_t messageType;                 // NMEA, RTCM, Unicore Binary, etc
     uint32_t check;                      // Checksum (NMEA), CRC24Q (RTCM), CRC32 (Unicore)
@@ -63,13 +61,13 @@ void um980NmeaFindAsterisk(UNICORE_PARSE_STATE *parse, uint8_t data);
 void um980NmeaChecksumByte1(UNICORE_PARSE_STATE *parse, uint8_t data);
 void um980NmeaChecksumByte2(UNICORE_PARSE_STATE *parse, uint8_t data);
 void um980NmeaLineTermination(UNICORE_PARSE_STATE *parse, uint8_t data);
-int AsciiToNibble(int data);
+int um980AsciiToNibble(int data);
 
 void um980UnicoreBinarySync2(UNICORE_PARSE_STATE *parse, uint8_t data);
 void um980UnicoreBinarySync3(UNICORE_PARSE_STATE *parse, uint8_t data);
 void um980UnicoreBinaryReadLength(UNICORE_PARSE_STATE *parse, uint8_t data);
 void um980UnicoreReadData(UNICORE_PARSE_STATE *parse, uint8_t data);
-uint32_t calculateCRC32(uint8_t *charBuffer, uint16_t bufferSize);
+uint32_t um980CalculateCRC32(uint8_t *charBuffer, uint16_t bufferSize);
 
 void um980RtcmReadLength1(UNICORE_PARSE_STATE *parse, uint8_t data);
 void um980RtcmReadLength2(UNICORE_PARSE_STATE *parse, uint8_t data);
@@ -78,7 +76,7 @@ void um980RtcmReadMessage2(UNICORE_PARSE_STATE *parse, uint8_t data);
 void um980RtcmReadData(UNICORE_PARSE_STATE *parse, uint8_t data);
 void um980RtcmReadCrc(UNICORE_PARSE_STATE *parse, uint8_t data);
 
-void eomHandler(UNICORE_PARSE_STATE *parse);
+void um980EomHandler(UNICORE_PARSE_STATE *parse);
 
 //From Unicore Reference Command Manual
 const unsigned long crc32Table[256] = {
@@ -115,8 +113,6 @@ const unsigned long crc32Table[256] = {
     0xBDBDF21CUL, 0xCABAC28AUL, 0x53B39330UL, 0x24B4A3A6UL, 0xBAD03605UL, 0xCDD70693UL, 0x54DE5729UL, 0x23D967BFUL,
     0xB3667A2EUL, 0xC4614AB8UL, 0x5D681B02UL, 0x2A6F2B94UL, 0xB40BBE37UL, 0xC30C8EA1UL, 0x5A05DF1BUL, 0x2D02EF8DUL};
 
-#define COMPUTE_CRC32(parse, data)  (((parse)->check << 8) ^ crcTable32[data ^ (((parse)->check >> 16) & 0xFF)])
-
 /*
    This is an implementation of the CRC-24Q cyclic redundancy checksum
    used by Qualcomm, RTCM104V3, and PGP 6.5.1. According to the RTCM104V3
@@ -148,7 +144,7 @@ const unsigned long crc32Table[256] = {
 
 //This file is originally from: https://gitlab.com/gpsd/gpsd/-/blob/master/gpsd/crc24q.c
 
-static const int unsigned crc24q[256] = {
+static const int unsigned crc24qTable[256] = {
   0x00000000u, 0x01864CFBu, 0x028AD50Du, 0x030C99F6u,
   0x0493E6E1u, 0x0515AA1Au, 0x061933ECu, 0x079F7F17u,
   0x08A18139u, 0x0927CDC2u, 0x0A2B5434u, 0x0BAD18CFu,
@@ -215,8 +211,6 @@ static const int unsigned crc24q[256] = {
   0xFCD11CCEu, 0xFD575035u, 0xFE5BC9C3u, 0xFFDD8538u,
 };
 
-#define COMPUTE_CRC24Q(parse, data)  (((parse)->check << 8) ^ crc24q[data ^ (((parse)->check >> 16) & 0xff)])
-
-
+#define COMPUTE_CRC24Q(parse, data)  (((parse)->crc << 8) ^ crc24qTable[data ^ (((parse)->crc >> 16) & 0xff)])
 
 #endif //_SPARKFUN_PARSER_H

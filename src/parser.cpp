@@ -7,7 +7,7 @@ extern UM980 *ptrUM980; // Global pointer for external parser access into librar
 // If it's a response to a command, is it OK or BAD? $command,badResponse,response:
 // PARSING FAILD NO MATCHING FUNC BADRESPONSE*40
 // If it's Unicore binary, load into target variables If it's NMEA or RTCM, discard
-void eomHandler(UNICORE_PARSE_STATE *parse)
+void um980EomHandler(UNICORE_PARSE_STATE *parse)
 {
     // Switch on message type (NMEA, RTCM, Unicore Binary, etc)
 
@@ -37,33 +37,21 @@ void eomHandler(UNICORE_PARSE_STATE *parse)
     }
     else if (parse->messageType == SFE_SENTENCE_TYPE_UNICORE_POUND_RESPONSE)
     {
-        // Serial.println("Handling Unicore pound response");
-
-        // Serial.printf("parse->nmeaMessageName: %s\r\n", (char *)parse->nmeaMessageName);
-
         // Does this response contain the command we are looking for?
         if (strcasecmp((char *)parse->nmeaMessageName, ptrUM980->commandName) == 0) // Found
             ptrUM980->commandResponse = UM980_RESULT_RESPONSE_COMMAND_OK;
     }
     else if (parse->messageType == SFE_SENTENCE_TYPE_NMEA)
     {
-        // Serial.println("NMEA handler");
-
-        // ID the NMEA message type
-
-        // Serial.print("NMEA Handler: ");
-        // for (int x = 0; x < parse->length; x++)
-        //     Serial.write(parse->buffer[x]);
-        // Serial.println();
+        //NMEA Handler
     }
     else if (parse->messageType == SFE_SENTENCE_TYPE_UNICORE_BINARY)
     {
         ptrUM980->unicoreHandler(parse->buffer, parse->length);
-        // Serial.println("Unicore handler");
     }
     else if (parse->messageType == SFE_SENTENCE_TYPE_RTCM)
     {
-        // Serial.println("RTCM handler");
+        //RTCM handler
     }
 }
 
@@ -203,14 +191,10 @@ void um980NmeaLineTermination(UNICORE_PARSE_STATE *parse, uint8_t data)
             parse->length--;
 
         // Convert the checksum characters into binary
-        int checksum = AsciiToNibble(parse->buffer[parse->nmeaLength - 2]) << 4;
-        checksum |= AsciiToNibble(parse->buffer[parse->nmeaLength - 1]);
+        int checksum = um980AsciiToNibble(parse->buffer[parse->nmeaLength - 2]) << 4;
+        checksum |= um980AsciiToNibble(parse->buffer[parse->nmeaLength - 1]);
 
         parse->messageType = SFE_SENTENCE_TYPE_NMEA;
-
-        // Serial.print("Parser Data: ");
-        // for (int x = 0; x < parse->length; x++)
-        //     Serial.write(parse->buffer[x]);
 
         // $GPGGA - NMEA prefixed with $ and the checksum is complete
 
@@ -236,7 +220,6 @@ void um980NmeaLineTermination(UNICORE_PARSE_STATE *parse, uint8_t data)
             {
                 if (ptrUM980->checkCRC((char *)parse->buffer) == UM980_RESULT_OK)
                 {
-                    Serial.println("Good CRC32!");
                     checksum = parse->check; // Mark message as valid
                 }
             }
@@ -276,8 +259,7 @@ void um980NmeaLineTermination(UNICORE_PARSE_STATE *parse, uint8_t data)
             // Return immediately if we are expecting a command
             if (ptrUM980->commandResponse == UM980_RESULT_RESPONSE_COMMAND_WAITING)
             {
-                // Serial.println("nmeaTermination Returning after EOM handler");
-                eomHandler(parse);
+                um980EomHandler(parse);
 
                 parse->length = 0;
                 parse->state = UNICORE_PARSE_STATE_WAITING_FOR_PREAMBLE; // Move to next state
@@ -285,27 +267,18 @@ void um980NmeaLineTermination(UNICORE_PARSE_STATE *parse, uint8_t data)
             }
 
             // Otherwise, continue parsing after handler
-            eomHandler(parse);
+            um980EomHandler(parse);
         }
         else
         {
-            Serial.print("Bad CRC on ");
             if (parse->messageType == SFE_SENTENCE_TYPE_NMEA)
-                Serial.print("NMEA");
+                ptrUM980->debugPrintf("Bad CRC on NMEA.");
             else if (parse->messageType == SFE_SENTENCE_TYPE_UNICORE_POUND_RESPONSE)
-                Serial.print("Unicore # Response");
+                ptrUM980->debugPrintf("Bad CRC on Unicore # Response.");
             else if (parse->messageType == SFE_SENTENCE_TYPE_UNICORE_COMMAND_RESPONSE)
-                Serial.print("Unicore Command");
+                ptrUM980->debugPrintf("Bad CRC on Unicore Command.");
 
-            Serial.print(". Expecting: ");
-            Serial.print(checksum);
-            Serial.print(" Found: ");
-            Serial.print(parse->check);
-            Serial.println();
-            Serial.print("Bad CRC Data: ");
-            for (int x = 0; x < parse->length; x++)
-                Serial.write(parse->buffer[x]);
-            Serial.println();
+            ptrUM980->debugPrintf("Expecting: 0x%08X Found: 0x%08X.", checksum, parse->check);
 
             parse->messageType = SFE_SENTENCE_TYPE_NONE;
         }
@@ -328,7 +301,7 @@ void um980NmeaLineTermination(UNICORE_PARSE_STATE *parse, uint8_t data)
 }
 
 // Convert nibble to ASCII
-int AsciiToNibble(int data)
+int um980AsciiToNibble(int data)
 {
     // Convert the value to lower case
     data |= 0x20;
@@ -381,9 +354,9 @@ void um980UnicoreBinaryReadLength(UNICORE_PARSE_STATE *parse, uint8_t data)
         // The overall message length is header (24) + data (expectedLength) + CRC (4)
         parse->bytesRemaining = um980HeaderLength + expectedLength + 4;
 
-        if (parse->bytesRemaining > PARSE_BUFFER_LENGTH)
+        if (parse->bytesRemaining > UNICORE_PARSE_BUFFER_LENGTH)
         {
-            Serial.println("Length overflow");
+            ptrUM980->debugPrintf("Length overflow");
 
             // Invalid length, place this byte at the beginning of the buffer
             parse->length = 0;
@@ -417,18 +390,18 @@ void um980UnicoreReadData(UNICORE_PARSE_STATE *parse, uint8_t data)
                            ((uint32_t)parse->buffer[parse->length - 2] << (8 * 2)) |
                            ((uint32_t)parse->buffer[parse->length - 1] << (8 * 3));
     uint32_t calculatedCRC =
-        calculateCRC32(parse->buffer, parse->length - 4); // CRC is calculated on entire messsage, sans CRC
+        um980CalculateCRC32(parse->buffer, parse->length - 4); // CRC is calculated on entire messsage, sans CRC
 
     // Process this message if CRC is valid
     if (sentenceCRC == calculatedCRC)
     {
         // Message complete, CRC is valid
         parse->messageType = SFE_SENTENCE_TYPE_UNICORE_BINARY;
-        eomHandler(parse);
+        um980EomHandler(parse);
     }
     else
     {
-        Serial.printf("Unicore CRC failed. Sentence CRC: 0x%02X Calculated CRC: 0x%02X\r\n", sentenceCRC,
+        ptrUM980->debugPrintf("Unicore CRC failed. Sentence CRC: 0x%02X Calculated CRC: 0x%02X\r\n", sentenceCRC,
                       calculatedCRC);
     }
 
@@ -438,7 +411,7 @@ void um980UnicoreReadData(UNICORE_PARSE_STATE *parse, uint8_t data)
 }
 
 // Calculate and return the CRC of the given buffer
-uint32_t calculateCRC32(uint8_t *charBuffer, uint16_t bufferSize)
+uint32_t um980CalculateCRC32(uint8_t *charBuffer, uint16_t bufferSize)
 {
     uint32_t crc = 0;
     for (uint16_t x = 0; x < bufferSize; x++)
@@ -471,9 +444,9 @@ void um980RtcmReadLength2(UNICORE_PARSE_STATE *parse, uint8_t data)
     parse->bytesRemaining |= data;
 
     // Check the length
-    if (parse->bytesRemaining > PARSE_BUFFER_LENGTH)
+    if (parse->bytesRemaining > UNICORE_PARSE_BUFFER_LENGTH)
     {
-        Serial.println("RTCM length overflow");
+        ptrUM980->debugPrintf("RTCM length overflow");
 
         // Invalid length, place this byte at the beginning of the buffer
         parse->length = 0;
@@ -532,26 +505,20 @@ void um980RtcmReadCrc(UNICORE_PARSE_STATE *parse, uint8_t data)
     parse->check = 0;
     for (int x = 0; x < parse->length - 3; x++) // Exclude CRC
     {
-        parse->check = ((parse)->check << 8) ^ crc24q[parse->buffer[x] ^ (((parse)->check >> 16) & 0xff)];
+        parse->check = ((parse)->check << 8) ^ crc24qTable[parse->buffer[x] ^ (((parse)->check >> 16) & 0xff)];
     }
     parse->check &= 0x00ffffff;
 
     // Process the message if CRC is valid
     if (parse->check == sentenceCRC)
     {
-        //Serial.printf("RTCM CRC Good length: %d\r\n", parse->length);
         parse->messageType = SFE_SENTENCE_TYPE_RTCM;
-        eomHandler(parse);
+        um980EomHandler(parse);
     }
     else
     {
-        Serial.printf("RTCM CRC failed length: %d sentence CRC: 0x%02X calc CRC: 0x%02X\r\n", parse->length,
+        ptrUM980->debugPrintf("RTCM CRC failed length: %d sentence CRC: 0x%02X calc CRC: 0x%02X\r\n", parse->length,
                       sentenceCRC, parse->check);
-        for (int x = 0; x < parse->length; x++)
-        {
-            Serial.write(parse->buffer[x]);
-        }
-        Serial.println();
     }
 
     // Search for another preamble byte

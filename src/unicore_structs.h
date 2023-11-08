@@ -7,11 +7,19 @@ typedef struct
     double latitude;
     double longitude;
     double altitude;
+    double horizontalSpeed;
+    double verticalSpeed;
+    double trackGround;
+
     float latitudeDeviation;
     float longitudeDeviation;
     float heightDeviation;
+    float horizontalSpeedDeviation;
+    float verticalSpeedDeviation;
 
     uint8_t positionType; // 0 = None, 1 = FixedPos, 8 = DopplerVelocity, 16 = Single, ...
+    uint8_t velocityType; // 0 = None, 1 = FixedPos, 8 = DopplerVelocity, 16 = Single, ...
+
     uint8_t
         solutionStatus; // 0 = Solution computed, 1 = Insufficient observation, 3 = No convergence, 4 = Covariance trace
 
