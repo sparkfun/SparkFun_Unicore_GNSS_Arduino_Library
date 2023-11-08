@@ -25,21 +25,34 @@
 #include <SoftwareSerial.h>
 #endif
 
+#include "parser.h"
+#include "unicore_structs.h"
+
+// Default maximum NMEA byte count
+// maxNMEAByteCount was set to 82: https://en.wikipedia.org/wiki/NMEA_0183#Message_structure
+// but this is often violated.
+// The user can adjust maxNMEAByteCount by calling setMaxNMEAByteCount
+// To be safe, use 100
+#define SFE_UM980_MAX_NMEA_BYTE_COUNT 100
+
 typedef enum
 {
     UM980_RESULT_OK = 0,
     UM980_RESULT_TIMEOUT_START_BYTE,
     UM980_RESULT_TIMEOUT_DATA_BYTE,
     UM980_RESULT_TIMEOUT_END_BYTE,
+    UM980_RESULT_TIMEOUT_RESPONSE,
     UM980_RESULT_WRONG_COMMAND,
     UM980_RESULT_WRONG_MESSAGE_ID,
-    UM980_RESULT_COMMAND_ERROR,
     UM980_RESULT_BAD_START_BYTE,
     UM980_RESULT_BAD_CHECKSUM,
     UM980_RESULT_BAD_CRC,
     UM980_RESULT_MISSING_CRC,
     UM980_RESULT_TIMEOUT,
     UM980_RESULT_RESPONSE_OVERFLOW,
+    UM980_RESULT_RESPONSE_COMMAND_OK,
+    UM980_RESULT_RESPONSE_COMMAND_ERROR,
+    UM980_RESULT_RESPONSE_COMMAND_WAITING,
 } Um980Result;
 
 const uint8_t um980BinarySyncA = 0xAA;
@@ -83,6 +96,12 @@ const uint16_t offsetBestnavHgtDeviation = 48;
 const uint16_t offsetBestnavSatsTracked = 64;
 const uint16_t offsetBestnavSatsUsed = 65;
 const uint16_t offsetBestnavExtSolStat = 69;
+const uint16_t offsetBestnavVelType = 76;
+const uint16_t offsetBestnavHorSpd = 88;
+const uint16_t offsetBestnavTrkGnd = 96;
+const uint16_t offsetBestnavVertSpd = 104;
+const uint16_t offsetBestnavVerspdStd = 112;
+const uint16_t offsetBestnavHorspdStd = 116;
 
 // BESTNAVXYZB
 const uint16_t messageIdBestnavXyz = 240;
@@ -121,69 +140,30 @@ class UM980
     unsigned long lastUpdateEcef = 0;
     unsigned long lastUpdateDateTime = 0;
 
-    double latitude = 0;
-    double longitude = 0;
-    double altitude = 0;
-    float latitudeDeviation = 0;
-    float longitudeDeviation = 0;
-    float heightDeviation = 0;
-
-    double ecefX = 0;
-    double ecefY = 0;
-    double ecefZ = 0;
-    float ecefXDeviation = 0;
-    float ecefYDeviation = 0;
-    float ecefZDeviation = 0;
-
-    uint8_t satellitesTracked = 0;
-    uint8_t satellitesUsed = 0;
-    uint8_t solutionStatus =
-        0; // 0 = Solution computed, 1 = Insufficient observation, 3 = No convergence, 4 = Covariance trace
-    uint8_t positionType = 0; // 0 = None, 1 = FixedPos, 8 = DopplerVelocity, 16 = Single, ...
-    uint8_t rtkSolution = 0;
-    uint8_t pseudorangeCorrection = 0;
-
-    uint16_t year = 0;
-    uint8_t month = 0;
-    uint8_t day = 0;
-    uint8_t hour = 0;
-    uint8_t minute = 0;
-    uint8_t second = 0;
-    uint16_t millisecond = 0;
-    uint8_t timeStatus = 3; // 0 = valid, 3 = invalid
-    uint8_t dateStatus = 0; // 0 = Invalid, 1 = valid, 2 = leap second warning
-    double timeOffset = 0;
-    double timeDeviation = 0;
-
-    bool staleGeodetic();
     bool staleDateTime();
     bool staleEcef();
 
-    Um980Result updateGeodetic(uint16_t maxWaitMs = 1500);
+    Um980Result getGeodetic(uint16_t maxWaitMs = 1500);
     Um980Result updateEcef(uint16_t maxWaitMs = 1500);
     Um980Result updateDateTime(uint16_t maxWaitMs = 1500);
 
-    // void sendSerialHw(uint8_t commandLength);
-    // void sendSerialSw(uint8_t commandLength);
-
     Print *_debugPort = nullptr; // The stream to send debug messages to if enabled. Usually Serial.
-
-    void debugPrintf(const char *format, ...);
 
   protected:
     HardwareSerial *_hwSerialPort = nullptr;
-#if __has_include("SoftwareSerial.h")
-    SoftwareSerial *_swSerialPort = nullptr;
-#else
-    HardwareSerial *_swSerialPort = nullptr;
-#endif
 
   public:
     bool begin(HardwareSerial &serialPort);
     bool isConnected();
+    bool update();
+    bool updateOnce();
 
+    void debugPrintf(const char *format, ...);
     void enableDebugging(Print &debugPort = Serial);
     void disableDebugging();
+
+    char commandName[20] = "";                 // Passes the command type into parser
+    uint8_t commandResponse = UM980_RESULT_OK; // Gets EOM result from parser
 
     // Mode
     bool setMode(const char *modeType);
@@ -236,26 +216,23 @@ class UM980
     void clearBuffer();
 
     bool sendCommand(const char *command, uint16_t maxWaitMs = 1500);
-    Um980Result sendQuery(const char *command, char *response, uint16_t *maxResponseLength, uint16_t maxWaitMs = 1500);
-    Um980Result sendQuery(const char *command, char *response, int *maxResponseLength, uint16_t maxWaitMs = 1500);
-
+    Um980Result sendQuery(const char *command, uint16_t maxWaitMs = 1500);
     Um980Result sendString(const char *command, uint16_t maxWaitMs = 1500);
-    Um980Result scanForCharacter(uint8_t characterToFind, uint16_t maxWaitMs);
-    Um980Result getResponseAscii(uint8_t characterToFind, char *response, uint16_t *maxResponseLength,
-                                 bool multiLineResponse = false, uint16_t maxWaitMs = 1500);
-    Um980Result getResponseBinary(const char *command, uint8_t *response, uint16_t *maxResponseLength,
-                                  uint16_t maxWaitMs);
-    Um980Result checkChecksum(char *response);
     Um980Result checkCRC(char *response);
-    uint32_t calculateCRC32(uint8_t *charBuffer, uint16_t bufferSize);
 
     // Main helper functions
-    double getLatitude();
+    double getLatitude(uint16_t maxWaitMs = 1500);
     double getLongitude();
     double getAltitude();
+    double getHorizontalSpeed();
+    double getVerticalSpeed();
+    double getTrackGround();
+
     float getLatitudeDeviation();
     float getLongitudeDeviation();
     float getAltitudeDeviation();
+    float getHorizontalSpeedDeviation();
+    float getVerticalSpeedDeviation();
 
     double getEcefX();
     double getEcefY();
@@ -265,10 +242,12 @@ class UM980
     float getEcefZDeviation();
 
     uint8_t getSIV();
-    uint8_t getSatellitesUsed();
     uint8_t getSatellitesTracked();
+    uint8_t getSatellitesUsed();
     uint8_t getSolutionStatus();
     uint8_t getPositionType();
+    uint8_t getVelocityType();
+
     uint8_t getRTKSolution();
     uint8_t getPseudorangeCorrection();
 
@@ -285,6 +264,17 @@ class UM980
     double getTimeOffsetDeviation();
 
     uint32_t getFixAgeMilliseconds(); // Based on Geodetic report
+
+    void unicoreHandler(uint8_t *data, uint16_t length);
+
+    bool initBestnav(uint8_t rate = 1);
+    UNICORE_BESTNAV_t *packetBESTNAV = nullptr;
+
+    bool initBestnavXyz(uint8_t rate = 1);
+    UNICORE_BESTNAVXYZ_t *packetBESTNAVXYZ = nullptr;
+
+    bool initRectime(uint8_t rate = 1);
+    UNICORE_RECTIME_t *packetRECTIME = nullptr;
 };
 
 #endif //_SPARKFUN_UNICORE_GNSS_ARDUINO_LIBRARY_H

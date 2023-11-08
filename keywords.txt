@@ -72,7 +72,6 @@ getResponseBinary	KEYWORD2
 
 checkChecksum	KEYWORD2
 checkCRC	KEYWORD2
-calculateCRC32	KEYWORD2
 
 getLatitude	KEYWORD2
 getLongitude	KEYWORD2

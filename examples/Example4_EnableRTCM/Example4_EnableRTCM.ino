@@ -1,5 +1,5 @@
 /*
-  Enable a RTCM message on various ports, at various rates.
+  Enable an RTCM message on various ports, at various rates.
   By: Nathan Seidle
   SparkFun Electronics
   Date: October 2nd, 2023
@@ -35,7 +35,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("UM980 comm over ESP UART1");
+  Serial.println("SparkFun UM980 Example");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);
@@ -63,7 +63,7 @@ void setup()
 
 void loop()
 {
-  //Read in NMEA from the UM980
+  //RTCM is in binary so printing it to the serial terminal will not show anything legible
   //  while (SerialGNSS.available())
   //    Serial.write(SerialGNSS.read());
 }

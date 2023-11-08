@@ -1,12 +1,13 @@
 /*
-  Set the UM980 Elevation Angle and minimum CN0 value
+  Sending direct commands to the UM980 GNSS receiver
   By: Nathan Seidle
   SparkFun Electronics
   Date: October 2nd, 2023
   License: MIT. Please see LICENSE.md for more information.
 
-  This example shows how set the Elevation Angle and minimum CN0 value required from a 
-  satellite to be included in the position calculation.
+  While the SparkFun UM980 Arduino library covers most of the features in the UM980, there
+  may be a special command that is needed but not supported. This sketch shows how to send commands direct.
+  
   These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
 
@@ -36,7 +37,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("UM980 comm over ESP UART1");
+  Serial.println("SparkFun UM980 Example");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);
@@ -45,20 +46,23 @@ void setup()
 
   if (myGNSS.begin(SerialGNSS) == false) //Give the serial port over to the library
   {
-    Serial.println("UM980 failed to respond. Check ports and baud rates. Freezing...");
-    while (true);
+    Serial.println("UM980 failed to respond. Check ports and baud rates.");
+    while (1);
   }
   Serial.println("UM980 detected!");
 
-  myGNSS.setElevationAngle(20); //Set the elevation mask angle to 20 degrees. Default is 5 degrees.
-  myGNSS.setMinCNO(10); //Set the minimum CN0 value to 10 dBHz
+  //Turn off all NMEA, RTCM, and any other message that may be reporting periodically
+  myGNSS.disableOutput();
 
-  myGNSS.saveConfiguration(); //Save the current configuration into non-volatile memory (NVM)
+  //sendCommand() sends the string directly and checks for the OK response
+  //Returns true if the OK was detected
+  if(myGNSS.sendCommand("UNMASK GPS") == true) Serial.println("GPS enabled");
+  else Serial.println("GPS unmask error");
+
+  myGNSS.sendCommand("MASK 10 GPS"); //Set the elevation mask angle as 10 degrees for GPS
 }
 
 void loop()
 {
-  //Read in NMEA from the UM980
-  while (SerialGNSS.available())
-    Serial.write(SerialGNSS.read());
+
 }

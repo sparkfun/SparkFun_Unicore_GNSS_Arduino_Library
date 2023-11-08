@@ -37,7 +37,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("UM980 comm over ESP UART1");
+  Serial.println("SparkFun UM980 Example");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);
@@ -53,7 +53,7 @@ void setup()
 
   bool response = true;
 
-  //Turn off all NMEA, RTCM, and any other message that may be reporting periodically
+  //Turn off all NMEA, RTCM, and any other messages that may be reporting periodic
   response &= myGNSS.disableOutput();
 
   float outputRate = 0.5; //0.5 = 2 reports per second.
@@ -66,7 +66,7 @@ void setup()
   response &= myGNSS.setNMEAPortMessage("GPRMC", comPort, outputRate);
   response &= myGNSS.saveConfiguration(); //Save the current configuration into non-volatile memory (NVM)
 
-  //If any one command failed, it will force response to false
+  //If any one command fails, it will force response to false
   if(response == false)
   {
     Serial.println("UM980 failed to configure. Freezing...");

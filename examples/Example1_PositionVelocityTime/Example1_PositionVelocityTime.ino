@@ -40,7 +40,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("UM980 comm over ESP UART1");
+  Serial.println("SparkFun UM980 Example");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);
@@ -57,29 +57,49 @@ void setup()
 
 void loop()
 {
+  myGNSS.update(); //Regularly call to parse any new data
+
   if (millis() - lastCheck > 1000)
   {
     lastCheck = millis();
 
-    //This is the polling method and requires a slight delay (around 135ms)
-    //while the device responds to the request
+    //The get methods are updated whenever new data is parsed with the update() call.
+    //By default, this data is updated once per second.
 
     Serial.print("Lat/Long/Alt: ");
     Serial.print(myGNSS.getLatitude(), 11);
     Serial.print("/");
     Serial.print(myGNSS.getLongitude(), 11);
     Serial.print("/");
-    Serial.println(myGNSS.getAltitude(), 4);
+    Serial.print(myGNSS.getAltitude(), 4);
+    Serial.println();
+
+    Serial.print("Horizontal Speed: ");
+    Serial.print(myGNSS.getHorizontalSpeed());
+    Serial.print("m/s Vertical Speed: ");
+    Serial.print(myGNSS.getVerticalSpeed());
+    Serial.print("m/s Direction from North: ");
+    Serial.print(myGNSS.getTrackGround());
+    Serial.print("(degrees)");
+    Serial.println();
 
     Serial.print("Date (yyyy/mm/dd): ");
     Serial.print(myGNSS.getYear());
     Serial.print("/");
     Serial.print(myGNSS.getMonth());
     Serial.print("/");
-    Serial.println(myGNSS.getDay());
+    Serial.print(myGNSS.getDay());
+    Serial.print(" Time (hh:mm:dd): ");
+    Serial.print(myGNSS.getHour());
+    Serial.print(":");
+    Serial.print(myGNSS.getMinute());
+    Serial.print(":");
+    Serial.print(myGNSS.getSecond());
+    Serial.println();
 
     Serial.print("Satellites in view: ");
-    Serial.println(myGNSS.getSIV());
+    Serial.print(myGNSS.getSIV());
+    Serial.println();
 
     Serial.println();
   }

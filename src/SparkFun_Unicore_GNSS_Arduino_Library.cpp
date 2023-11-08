@@ -74,45 +74,16 @@
 
 #include "SparkFun_Unicore_GNSS_Arduino_Library.h"
 #include "Arduino.h"
+#include "parser.h"
 
-const unsigned long crcTable[256] = {
-    0x00000000UL, 0x77073096UL, 0xEE0E612CUL, 0x990951BAUL, 0x076DC419UL, 0x706AF48FUL, 0xE963A535UL, 0x9E6495A3UL,
-    0x0EDB8832UL, 0x79DCB8A4UL, 0xE0D5E91EUL, 0x97D2D988UL, 0x09B64C2BUL, 0x7EB17CBDUL, 0xE7B82D07UL, 0x90BF1D91UL,
-    0x1DB71064UL, 0x6AB020F2UL, 0xF3B97148UL, 0x84BE41DEUL, 0x1ADAD47DUL, 0x6DDDE4EBUL, 0xF4D4B551UL, 0x83D385C7UL,
-    0x136C9856UL, 0x646BA8C0UL, 0xFD62F97AUL, 0x8A65C9ECUL, 0x14015C4FUL, 0x63066CD9UL, 0xFA0F3D63UL, 0x8D080DF5UL,
-    0x3B6E20C8UL, 0x4C69105EUL, 0xD56041E4UL, 0xA2677172UL, 0x3C03E4D1UL, 0x4B04D447UL, 0xD20D85FDUL, 0xA50AB56BUL,
-    0x35B5A8FAUL, 0x42B2986CUL, 0xDBBBC9D6UL, 0xACBCF940UL, 0x32D86CE3UL, 0x45DF5C75UL, 0xDCD60DCFUL, 0xABD13D59UL,
-    0x26D930ACUL, 0x51DE003AUL, 0xC8D75180UL, 0xBFD06116UL, 0x21B4F4B5UL, 0x56B3C423UL, 0xCFBA9599UL, 0xB8BDA50FUL,
-    0x2802B89EUL, 0x5F058808UL, 0xC60CD9B2UL, 0xB10BE924UL, 0x2F6F7C87UL, 0x58684C11UL, 0xC1611DABUL, 0xB6662D3DUL,
-    0x76DC4190UL, 0x01DB7106UL, 0x98D220BCUL, 0xEFD5102AUL, 0x71B18589UL, 0x06B6B51FUL, 0x9FBFE4A5UL, 0xE8B8D433UL,
-    0x7807C9A2UL, 0x0F00F934UL, 0x9609A88EUL, 0xE10E9818UL, 0x7F6A0DBBUL, 0x086D3D2DUL, 0x91646C97UL, 0xE6635C01UL,
-    0x6B6B51F4UL, 0x1C6C6162UL, 0x856530D8UL, 0xF262004EUL, 0x6C0695EDUL, 0x1B01A57BUL, 0x8208F4C1UL, 0xF50FC457UL,
-    0x65B0D9C6UL, 0x12B7E950UL, 0x8BBEB8EAUL, 0xFCB9887CUL, 0x62DD1DDFUL, 0x15DA2D49UL, 0x8CD37CF3UL, 0xFBD44C65UL,
-    0x4DB26158UL, 0x3AB551CEUL, 0xA3BC0074UL, 0xD4BB30E2UL, 0x4ADFA541UL, 0x3DD895D7UL, 0xA4D1C46DUL, 0xD3D6F4FBUL,
-    0x4369E96AUL, 0x346ED9FCUL, 0xAD678846UL, 0xDA60B8D0UL, 0x44042D73UL, 0x33031DE5UL, 0xAA0A4C5FUL, 0xDD0D7CC9UL,
-    0x5005713CUL, 0x270241AAUL, 0xBE0B1010UL, 0xC90C2086UL, 0x5768B525UL, 0x206F85B3UL, 0xB966D409UL, 0xCE61E49FUL,
-    0x5EDEF90EUL, 0x29D9C998UL, 0xB0D09822UL, 0xC7D7A8B4UL, 0x59B33D17UL, 0x2EB40D81UL, 0xB7BD5C3BUL, 0xC0BA6CADUL,
-    0xEDB88320UL, 0x9ABFB3B6UL, 0x03B6E20CUL, 0x74B1D29AUL, 0xEAD54739UL, 0x9DD277AFUL, 0x04DB2615UL, 0x73DC1683UL,
-    0xE3630B12UL, 0x94643B84UL, 0x0D6D6A3EUL, 0x7A6A5AA8UL, 0xE40ECF0BUL, 0x9309FF9DUL, 0x0A00AE27UL, 0x7D079EB1UL,
-    0xF00F9344UL, 0x8708A3D2UL, 0x1E01F268UL, 0x6906C2FEUL, 0xF762575DUL, 0x806567CBUL, 0x196C3671UL, 0x6E6B06E7UL,
-    0xFED41B76UL, 0x89D32BE0UL, 0x10DA7A5AUL, 0x67DD4ACCUL, 0xF9B9DF6FUL, 0x8EBEEFF9UL, 0x17B7BE43UL, 0x60B08ED5UL,
-    0xD6D6A3E8UL, 0xA1D1937EUL, 0x38D8C2C4UL, 0x4FDFF252UL, 0xD1BB67F1UL, 0xA6BC5767UL, 0x3FB506DDUL, 0x48B2364BUL,
-    0xD80D2BDAUL, 0xAF0A1B4CUL, 0x36034AF6UL, 0x41047A60UL, 0xDF60EFC3UL, 0xA867DF55UL, 0x316E8EEFUL, 0x4669BE79UL,
-    0xCB61B38CUL, 0xBC66831AUL, 0x256FD2A0UL, 0x5268E236UL, 0xCC0C7795UL, 0xBB0B4703UL, 0x220216B9UL, 0x5505262FUL,
-    0xC5BA3BBEUL, 0xB2BD0B28UL, 0x2BB45A92UL, 0x5CB36A04UL, 0xC2D7FFA7UL, 0xB5D0CF31UL, 0x2CD99E8BUL, 0x5BDEAE1DUL,
-    0x9B64C2B0UL, 0xEC63F226UL, 0x756AA39CUL, 0x026D930AUL, 0x9C0906A9UL, 0xEB0E363FUL, 0x72076785UL, 0x05005713UL,
-    0x95BF4A82UL, 0xE2B87A14UL, 0x7BB12BAEUL, 0x0CB61B38UL, 0x92D28E9BUL, 0xE5D5BE0DUL, 0x7CDCEFB7UL, 0x0BDBDF21UL,
-    0x86D3D2D4UL, 0xF1D4E242UL, 0x68DDB3F8UL, 0x1FDA836EUL, 0x81BE16CDUL, 0xF6B9265BUL, 0x6FB077E1UL, 0x18B74777UL,
-    0x88085AE6UL, 0xFF0F6A70UL, 0x66063BCAUL, 0x11010B5CUL, 0x8F659EFFUL, 0xF862AE69UL, 0x616BFFD3UL, 0x166CCF45UL,
-    0xA00AE278UL, 0xD70DD2EEUL, 0x4E048354UL, 0x3903B3C2UL, 0xA7672661UL, 0xD06016F7UL, 0x4969474DUL, 0x3E6E77DBUL,
-    0xAED16A4AUL, 0xD9D65ADCUL, 0x40DF0B66UL, 0x37D83BF0UL, 0xA9BCAE53UL, 0xDEBB9EC5UL, 0x47B2CF7FUL, 0x30B5FFE9UL,
-    0xBDBDF21CUL, 0xCABAC28AUL, 0x53B39330UL, 0x24B4A3A6UL, 0xBAD03605UL, 0xCDD70693UL, 0x54DE5729UL, 0x23D967BFUL,
-    0xB3667A2EUL, 0xC4614AB8UL, 0x5D681B02UL, 0x2A6F2B94UL, 0xB40BBE37UL, 0xC30C8EA1UL, 0x5A05DF1BUL, 0x2D02EF8DUL};
+UM980 *ptrUM980 = nullptr; // Global pointer for external parser access into library class
+
+UNICORE_PARSE_STATE unicoreParse = {UNICORE_PARSE_STATE_WAITING_FOR_PREAMBLE};
 
 bool UM980::begin(HardwareSerial &serialPort)
 {
+    ptrUM980 = this;
     _hwSerialPort = &serialPort;
-    _swSerialPort = nullptr;
 
     // We assume the user has started the serial port with proper pins and baud rate prior to calling begin()
 
@@ -131,11 +102,25 @@ bool UM980::isConnected()
 {
     for (int x = 0; x < 3; x++)
     {
-        char response[200];
-        uint16_t maxResponseLength = sizeof(response);
+        serialPrintln("UNLOG"); // Blindly tell unit to stop transmitting
 
-        // debugPrintf("UM980: Sending MODE query."); // Response to query should start with #
-        if (sendQuery("MODE", response, &maxResponseLength) == UM980_RESULT_OK)
+        // Wait until serial stops coming in
+        uint16_t maxTime = 500;
+        unsigned long startTime = millis();
+        while (1)
+        {
+            delay(50);
+
+            if (serialAvailable() == 0)
+                break;
+            while (serialAvailable())
+                serialRead();
+
+            if (millis() - startTime > maxTime)
+                return (false);
+        }
+
+        if (sendQuery("MODE") == UM980_RESULT_OK)
             return (true);
         debugPrintf("UM980 failed to connect. Trying again.");
         delay(500);
@@ -154,7 +139,92 @@ void UM980::disableDebugging()
     _debugPort = nullptr;
 }
 
-// Mode
+// Check for new data until there is no more
+bool UM980::update()
+{
+    bool newData = false;
+    while (serialAvailable())
+        newData = updateOnce();
+    return (newData);
+}
+
+// Checks for new data once
+// Used during sendString and sendQuery
+bool UM980::updateOnce()
+{
+    if (serialAvailable())
+    {
+        uint8_t incoming = serialRead();
+
+        // Move byte into parser
+        unicoreParse.buffer[unicoreParse.length++] = incoming;
+        unicoreParse.length %= UNICORE_PARSE_BUFFER_LENGTH;
+
+        // unicoreParse.state(&unicoreParse, incoming);
+        //  Update the parser state based on the incoming byte
+        switch (unicoreParse.state)
+        {
+        default:
+            debugPrintf("Case not found! : %d\r\n", unicoreParse.state);
+            // Drop to waiting for preamble
+        case (UNICORE_PARSE_STATE_WAITING_FOR_PREAMBLE):
+            um980WaitForPreamble(&unicoreParse, incoming);
+            break;
+
+        case (UNICORE_PARSE_STATE_NMEA_FIRST_COMMA):
+            um980NmeaFindFirstComma(&unicoreParse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_NMEA_FIND_ASTERISK):
+            um980NmeaFindAsterisk(&unicoreParse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_NMEA_CHECKSUM1):
+            um980NmeaChecksumByte1(&unicoreParse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_NMEA_CHECKSUM2):
+            um980NmeaChecksumByte2(&unicoreParse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_NMEA_TERMINATION):
+            um980NmeaLineTermination(&unicoreParse, incoming);
+            break;
+
+        case (UNICORE_PARSE_STATE_UNICORE_SYNC2):
+            um980UnicoreBinarySync2(&unicoreParse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_UNICORE_SYNC3):
+            um980UnicoreBinarySync3(&unicoreParse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_UNICORE_READ_LENGTH):
+            um980UnicoreBinaryReadLength(&unicoreParse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_UNICORE_READ_DATA):
+            um980UnicoreReadData(&unicoreParse, incoming);
+            break;
+
+        case (UNICORE_PARSE_STATE_RTCM_LENGTH1):
+            um980RtcmReadLength1(&unicoreParse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_RTCM_LENGTH2):
+            um980RtcmReadLength2(&unicoreParse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_RTCM_MESSAGE1):
+            um980RtcmReadMessage1(&unicoreParse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_RTCM_MESSAGE2):
+            um980RtcmReadMessage2(&unicoreParse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_RTCM_DATA):
+            um980RtcmReadData(&unicoreParse, incoming);
+            break;
+        case (UNICORE_PARSE_STATE_RTCM_CRC):
+            um980RtcmReadCrc(&unicoreParse, incoming);
+            break;
+        }
+        return (true);
+    }
+    return (false);
+}
+
+// Mode commands
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // Directly set a mode: setMode("ROVER");
@@ -229,11 +299,11 @@ bool UM980::setModeRoverAutomotive()
 }
 bool UM980::setModeRoverMow()
 {
-    return (setModeRover(
-        "SURVEY MOW")); // This fails for unknown reasons. Might be build7923 required, might not be supported on UM980.
+    return (setModeRover("SURVEY MOW")); // This fails for unknown reasons. Might be build7923 required, might not
+                                         // be supported on UM980.
 }
 
-// Config
+// Config commands
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // Configure a given COM port to a given baud
@@ -285,7 +355,7 @@ bool UM980::configurePPS(const char *configString)
     return (sendCommand(command));
 }
 
-// Mask
+// Mask commands
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // Available constellations: GPS, BDS, GLO, GAL, QZSS, IRNSS
@@ -354,9 +424,8 @@ bool UM980::disableFrequency(const char *frequencyName)
     return (disableSystem(command));
 }
 
-// Called mask (disable) and unmask (enable), this is how to ignore certain constellations, or signal/frequencies, or
-// satellite elevations
-// Returns true if successful
+// Called mask (disable) and unmask (enable), this is how to ignore certain constellations, or signal/frequencies,
+// or satellite elevations Returns true if successful
 bool UM980::enableSystem(const char *systemName)
 {
     char command[50];
@@ -373,7 +442,7 @@ bool UM980::disableSystem(const char *systemName)
     return (sendCommand(command));
 }
 
-// Data Output
+// Data Output commands
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // Set the output rate of a given message on a given COM port/Use
@@ -435,7 +504,7 @@ bool UM980::setRTCMMessage(const char *sentenceType, float outputRate)
     return (sendCommand(command));
 }
 
-// Other
+// Other commands
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // Disables all messages on this port
@@ -475,7 +544,8 @@ bool UM980::saveConfiguration()
     return (sendCommand("SAVECONFIG"));
 }
 
-// Lower level interface functions
+// Abstraction of the serial interface
+// Useful if we ever need to support SoftwareSerial
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // Enable printfs to various endpoints
@@ -505,6 +575,42 @@ void UM980::debugPrintf(const char *format, ...)
     va_end(args2);
 }
 
+// Discards any characters sitting in RX buffer
+void UM980::clearBuffer()
+{
+    while (serialAvailable())
+        serialRead();
+}
+
+uint16_t UM980::serialAvailable()
+{
+    if (_hwSerialPort != nullptr)
+    {
+        return (_hwSerialPort->available());
+    }
+    return (0);
+}
+
+uint8_t UM980::serialRead()
+{
+    if (_hwSerialPort != nullptr)
+    {
+        return (_hwSerialPort->read());
+    }
+    return (0);
+}
+
+void UM980::serialPrintln(const char *command)
+{
+    if (_hwSerialPort != nullptr)
+    {
+        _hwSerialPort->println(command);
+    }
+}
+
+// Query and send functionality
+//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
 // Send a command string (ie 'MODE ROVER') to the UM980
 // Returns true if device reponded with OK to command
 bool UM980::sendCommand(const char *command, uint16_t maxWaitMs)
@@ -518,350 +624,100 @@ bool UM980::sendCommand(const char *command, uint16_t maxWaitMs)
 // Looks for a query response ('#')
 // Some commands like MASK or CONFIG have responses that begin with $
 //'#' begins the responses to queries, ie 'MODE', ends with the result (ie MODE ROVER)
+// #MODE,97,GPS,FINE,2283,499142000,0,0,18,22;MODE BASE -1280206.5680 -4716804.4030 4086665.4840,*60
+
 //'$' begins the responses to commands, ie 'MODE ROVER', ends with OK
 // Contains reponse for caller
-Um980Result UM980::sendQuery(const char *command, char *response, uint16_t *maxResponseLength, uint16_t maxWaitMs)
+Um980Result UM980::sendQuery(const char *command, uint16_t maxWaitMs)
 {
     Um980Result result;
 
     clearBuffer();
 
-    // Send command and check COMMAND OK response
+    // Send command and check for OK response
     result = sendString(command, maxWaitMs);
     if (result != UM980_RESULT_OK)
         return (result);
 
-    // Determine the response character we should expect
-    // For CONFIG and MASK, the data will be prefixed with a $
-    // For MODE and any Unicore command, the data will be prefixed with a #
-    // For VERSION, the sentence is terminated with a 32-bit CRC, not an 8-bit checksum
+    unicoreParse.length = 0; // Reset parser
+    strncpy(commandName, command, sizeof(commandName));
+    commandResponse = UM980_RESULT_RESPONSE_COMMAND_WAITING; // Reset
 
-    uint8_t characterToFind = '#'; // Default to looking for the start of a response to a MODE or Unicore command
-    bool multiLineResponse = false;
-    bool crcCheck = false;
-
-    // Check for CONFIG or MASK
-    char *commandConfigPointer = strcasestr(command, "CONFIG");
-    if (commandConfigPointer != nullptr) // Found
+    // Feed the parser until we see a response to the command
+    int wait = 0;
+    while (1)
     {
-        characterToFind = '$';
-        multiLineResponse = true;
-        maxWaitMs = 100; // Because it is a multi-line response, we depend on a timeout to exit
+        if (wait++ == maxWaitMs)
+        {
+            return (UM980_RESULT_TIMEOUT_RESPONSE);
+        }
+
+        updateOnce(); // Will call um980EomHandler()
+
+        if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_OK)
+            break;
+
+        if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_ERROR)
+        {
+            return (UM980_RESULT_RESPONSE_COMMAND_ERROR);
+        }
+
+        delay(1);
     }
 
-    char *commandMaskPointer = strcasestr(command, "MASK");
-    if (commandMaskPointer != nullptr) // Found
-    {
-        characterToFind = '$';
-        multiLineResponse = true; // Mask may be single or multi-line.
-        maxWaitMs = 100;          // Because it is a multi-line response, we depend on a timeout to exit
-    }
-
-    char *commandVersionPointer = strcasestr(command, "VERSION");
-    if (commandVersionPointer != nullptr) // Found
-    {
-        characterToFind = '#';
-        multiLineResponse = false; // Mask may be single or multi-line.
-        crcCheck = true;
-        maxWaitMs = 100; // Because it is a multi-line response, we depend on a timeout to exit
-    }
-
-    result = getResponseAscii(characterToFind, response, maxResponseLength, multiLineResponse, maxWaitMs);
-    if (result != UM980_RESULT_OK)
-        return (result);
-
-    debugPrintf("UM980 response length %d: %s", *maxResponseLength, response);
-
-    if (crcCheck == true)
-    {
-        result = checkCRC(response); // Assumes response is \0 terminated
-        if (result != UM980_RESULT_OK)
-            return (result);
-    }
-    else
-    {
-        result = checkChecksum(response); // Assumes response is \0 terminated
-        if (result != UM980_RESULT_OK)
-            return (result);
-    }
-
-    // Verify this response is for this command
-    char *commandPointer = strstr(response, command);
-    if (commandPointer == nullptr) // Not found
-    {
-        debugPrintf("Wrong command");
-        return (UM980_RESULT_WRONG_COMMAND);
-    }
+    // debugPrintf("Found OK to command");
 
     return (UM980_RESULT_OK);
 }
 
-Um980Result UM980::sendQuery(const char *command, char *response, int *maxResponseLength, uint16_t maxWaitMs)
-{
-    return (sendQuery(command, response, (uint16_t *)maxResponseLength, maxWaitMs));
-}
-
 // Send a string to the UM980
-// Looks for a command response ('$')
+// Looks for a command response ('#' or '$')
 //'#' begins the responses to queries, ie 'MODE', ends with the result (ie MODE ROVER)
 //'$' begins the responses to commands, ie 'MODE ROVER', ends with OK
+//$command,badResponse,response: PARSING FAILD NO MATCHING FUNC  BADRESPONSE*40
 // Returns UM980 result
 Um980Result UM980::sendString(const char *command, uint16_t maxWaitMs)
 {
     clearBuffer();
 
+    unicoreParse.length = 0; // Reset parser
+    strncpy(commandName, command, sizeof(commandName));
+    commandResponse = UM980_RESULT_RESPONSE_COMMAND_WAITING; // Reset
+
     serialPrintln(command);
 
-    char response[500];
-    uint16_t responseLength = sizeof(response);
-    Um980Result result;
-
-    // All responses to command strings start with a $
-    //$command,MASK,response: OK*4A
-    result = getResponseAscii('$', response, &responseLength, false, maxWaitMs); // Single line response
-    if (result != UM980_RESULT_OK)
-        return (result);
-
-    debugPrintf("UM980 response length %d: %s", responseLength, response);
-
-    result = checkChecksum(response); // Assumes response is \0 terminated
-    if (result != UM980_RESULT_OK)
-        return (result);
-
-    // Verify this response is for this command
-    char *commandPointer = strstr(response, command);
-    if (commandPointer == nullptr) // Not found
+    // Feed the parser until we see a response to the command
+    int wait = 0;
+    while (1)
     {
-        debugPrintf("Wrong command");
-        return (UM980_RESULT_WRONG_COMMAND);
-    }
+        if (wait++ == maxWaitMs)
+        {
+            return (UM980_RESULT_TIMEOUT_RESPONSE);
+        }
 
-    char *okPointer = strstr(
-        response, ": OK"); // We could check for OK, but this should remove confusion with strings that may contain OK
-    if (okPointer == nullptr)
-    {
-        debugPrintf("Command error");
-        return (UM980_RESULT_COMMAND_ERROR); // Not found
+        updateOnce(); // Will call um980EomHandler()
+
+        if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_OK)
+        {
+            break;
+        }
+
+        if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_ERROR)
+        {
+            return (UM980_RESULT_RESPONSE_COMMAND_ERROR);
+        }
+
+        delay(1);
     }
 
     return (UM980_RESULT_OK);
-}
-
-// Given the start character to look for
-// Polls serial port until timout, or response received
-// Returns OK if response is received with valid checksum
-// Response is stored in response[] and null terminated
-// maxResponseLength length is updated to contain the length of the response
-Um980Result UM980::getResponseAscii(uint8_t characterToFind, char *response, uint16_t *maxResponseLength,
-                                    bool multiLineResponse, uint16_t maxWaitMs)
-{
-    int responseLength = 0;
-
-    // Find start byte
-    //'#' begins the responses to queries, ie 'MODE', ends with the result (ie MODE ROVER)
-    //'$' begins the responses to commands, ie 'MODE ROVER', ends with OK
-    Um980Result result = scanForCharacter(characterToFind, maxWaitMs);
-    if (result != UM980_RESULT_OK)
-        return (result);
-
-    response[responseLength++] = characterToFind;
-
-    // Find end byte '\n'
-    // If this is a multiLine response then just wait for one
-    bool foundEndByte = false;
-
-    unsigned long lastByteReceivedTime = millis();
-    while (1)
-    {
-        if (millis() - lastByteReceivedTime > maxWaitMs)
-        {
-            // If we found at least one endbyte, terminate the response and return length
-            if (foundEndByte == true)
-            {
-                debugPrintf("Multi-line timeout");
-                break;
-            }
-
-            debugPrintf("Timeout end byte");
-            return (UM980_RESULT_TIMEOUT_END_BYTE);
-        }
-
-        if (serialAvailable())
-        {
-            byte incoming = serialRead();
-            response[responseLength] = incoming;
-            if (incoming == um980ASCIISyncEnd)
-            {
-                // If we are expecting a multi-line response, continue to scan until we timeout
-                if (multiLineResponse == true)
-                    foundEndByte = true;
-                else
-                    break;
-            }
-
-            responseLength++;
-            if (responseLength == *maxResponseLength - 1) // Leave room for terminator
-            {
-                debugPrintf("Response overflow");
-                return (UM980_RESULT_RESPONSE_OVERFLOW);
-            }
-        }
-    }
-
-    response[responseLength] = '\0'; // Terminate
-
-    *maxResponseLength = responseLength; // Update caller's copy. Exclude the terminator in the length report.
-
-    return (UM980_RESULT_OK);
-}
-
-// Send a string to the UM980, ie 'VERSIONB'
-// Checks to see the command is confirmed with OK
-// Returns the binary encoded response if CRC checks
-Um980Result UM980::getResponseBinary(const char *command, uint8_t *response, uint16_t *maxResponseLength,
-                                     uint16_t maxWaitMs)
-{
-    Um980Result result;
-
-    // Send ASCII command and check for ASCII 'OK'
-    result = sendString(command, maxWaitMs);
-    if (result != UM980_RESULT_OK)
-        return (result);
-    // debugPrintf("Command sent success");
-
-    uint16_t responseLength = 0;
-    uint16_t expectedLength = 0;
-
-    // debugPrintf("Scanning for start");
-
-    // Find start byte 0xAA
-    result = scanForCharacter(um980BinarySyncA, maxWaitMs);
-    if (result != UM980_RESULT_OK)
-        return (result);
-
-    // debugPrintf("Start char found!");
-
-    response[responseLength++] = um980BinarySyncA; // Store start byte so that offsets align
-
-    // Begin gathering data
-    unsigned long lastByteReceivedTime = millis();
-    while (1)
-    {
-        if (millis() - lastByteReceivedTime > maxWaitMs)
-        {
-            debugPrintf("Timeout data byte");
-            return (UM980_RESULT_TIMEOUT_DATA_BYTE);
-        }
-
-        if (serialAvailable())
-        {
-            uint8_t incoming = serialRead();
-
-            lastByteReceivedTime = millis();
-
-            response[responseLength] = incoming;
-
-            if (responseLength == offsetHeaderMessageLength)
-            {
-                expectedLength = incoming; // LSB
-            }
-            if (responseLength == offsetHeaderMessageLength + 1)
-            {
-                expectedLength |= (uint16_t)incoming << 8; // MSB
-
-                // The overall message length is header (24) + data (expectedLength) + CRC (4)
-                expectedLength = um980HeaderLength + expectedLength + 4;
-            }
-
-            responseLength++;
-
-            if (responseLength == *maxResponseLength)
-            {
-                debugPrintf("Response overflow");
-                return (UM980_RESULT_RESPONSE_OVERFLOW);
-            }
-
-            if (expectedLength > 0 && responseLength == expectedLength)
-                break; // Reached the end of the packet
-        }
-    }
-
-    if (response[offsetHeaderSyncB] != um980BinarySyncB || response[offsetHeaderSyncC] != um980BinarySyncC)
-    {
-        debugPrintf("Bad start byte");
-        return (UM980_RESULT_BAD_START_BYTE);
-    }
-    // debugPrintf("Good start bytes");
-
-    debugPrintf("UM980 response length: %d", responseLength);
-
-    //  for (int x = 0 ; x < responseLength ; x++)
-    //    debugPrintf("%d) 0x%02X\r\n", x, response[x]);
-
-    uint32_t sentenceCRC =
-        ((uint32_t)response[responseLength - 4] << (8 * 0)) | ((uint32_t)response[responseLength - 3] << (8 * 1)) |
-        ((uint32_t)response[responseLength - 2] << (8 * 2)) | ((uint32_t)response[responseLength - 1] << (8 * 3));
-    uint32_t calculatedCRC =
-        calculateCRC32(response, responseLength - 4); // CRC is calculated on entire messsage, sans CRC
-
-    debugPrintf("Sentence CRC: 0x%02X Calculated CRC: 0x%02X", sentenceCRC, calculatedCRC);
-
-    if (sentenceCRC != calculatedCRC)
-    {
-        debugPrintf("CRC failed. Sentence CRC: 0x%02X Calculated CRC: 0x%02X", sentenceCRC, calculatedCRC);
-        return (UM980_RESULT_BAD_CRC);
-    }
-
-    // debugPrintf("CRC matches!");
-
-    *maxResponseLength = responseLength;
-
-    return (UM980_RESULT_OK);
-}
-
-// Scan serial until character is found
-// Return if success or timeout
-Um980Result UM980::scanForCharacter(uint8_t characterToFind, uint16_t maxWaitMs)
-{
-    unsigned long startTime = millis();
-
-    // debugPrintf("Scanning for %c", characterToFind);
-
-    while (1)
-    {
-        if (millis() - startTime > maxWaitMs)
-        {
-            debugPrintf("Timeout start byte");
-            return (UM980_RESULT_TIMEOUT_START_BYTE);
-        }
-
-        if (serialAvailable())
-        {
-            uint8_t incoming = serialRead();
-            // debugPrintf("Char found: 0x%02X %c", incoming, incoming);
-            // Serial.write(incoming);
-            if (incoming == characterToFind)
-            {
-                return (UM980_RESULT_OK);
-            }
-        }
-    }
-    return (UM980_RESULT_OK); // We should never get here
-}
-
-// Calculate and return the CRC of the given buffer
-uint32_t UM980::calculateCRC32(uint8_t *charBuffer, uint16_t bufferSize)
-{
-    uint32_t crc = 0;
-    for (uint16_t x = 0; x < bufferSize; x++)
-        crc = crcTable[(crc ^ charBuffer[x]) & 0xFF] ^ (crc >> 8);
-    return crc;
 }
 
 // Scans a response for the * terminator character
 // Assumes response is null terminated
 // Used for visible CRC (for example VERSION query)
-// Ex: #VERSION,97,GPS,FINE,2282,248561000,0,0,18,676;UM980,R4.10Build7923,HRPT00-S10C-P,2310415000001-MD22B1224962616,ff3bac96f31f9bdd,2022/09/28*7432d4ed
+// Ex:
+// #VERSION,97,GPS,FINE,2282,248561000,0,0,18,676;UM980,R4.10Build7923,HRPT00-S10C-P,2310415000001-MD22B1224962616,ff3bac96f31f9bdd,2022/09/28*7432d4ed
 // CRC is calculated without the # or * characters
 // Returns OK if valid CRC
 Um980Result UM980::checkCRC(char *response)
@@ -871,7 +727,7 @@ Um980Result UM980::checkCRC(char *response)
     uint32_t sentenceCRC = 0;
     int packetLength = 0;
 
-    for (packetLength = 1; packetLength < strlen(response); packetLength++) //Remove # from CRC calculation
+    for (packetLength = 1; packetLength < strlen(response); packetLength++) // Remove # from CRC calculation
     {
         if (response[packetLength] == '*')
         {
@@ -887,12 +743,12 @@ Um980Result UM980::checkCRC(char *response)
                 hexString[5] = response[packetLength + 6];
                 hexString[6] = response[packetLength + 7];
                 hexString[7] = response[packetLength + 8];
-                sentenceCRC = strtoul(hexString, NULL, 16); //Unsigned Long variant of strtol
+                sentenceCRC = strtoul(hexString, NULL, 16); // Unsigned Long variant of strtol
             }
             break; // Exclude * from CRC
         }
 
-        calculatedCRC = crcTable[(calculatedCRC ^ response[packetLength]) & 0xFF] ^ (calculatedCRC >> 8);
+        calculatedCRC = crc32Table[(calculatedCRC ^ response[packetLength]) & 0xFF] ^ (calculatedCRC >> 8);
     }
 
     if (packetLength == strlen(response))
@@ -907,452 +763,451 @@ Um980Result UM980::checkCRC(char *response)
     return (UM980_RESULT_OK);
 }
 
-// Scans a response for the * terminator character
-// Assumes response is null terminated
-// Ex: $command,MODE ROVER,response: OK*21
-// Checksum is 8-bit XOR, includes $, excludes * (which is different from NMEA that excludes both)
-// https://www.scadacore.com/tools/programming-calculators/online-checksum-calculator/
-// Returns OK if valid checksum
-Um980Result UM980::checkChecksum(char *response)
+// Main Unicore handler and RAM inits
+//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#define CHECK_POINTER_BOOL(packetPointer, initPointer)                                                                 \
+    {                                                                                                                  \
+        if (packetPointer == nullptr)                                                                                  \
+            initPointer();                                                                                             \
+        if (packetPointer == nullptr)                                                                                  \
+            return false;                                                                                              \
+    }
+
+#define CHECK_POINTER_VOID(packetPointer, initPointer)                                                                 \
+    {                                                                                                                  \
+        if (packetPointer == nullptr)                                                                                  \
+            initPointer();                                                                                             \
+        if (packetPointer == nullptr)                                                                                  \
+            return;                                                                                                    \
+    }
+
+// Cracks a given binary message into the applicable container
+void UM980::unicoreHandler(uint8_t *response, uint16_t length)
 {
-    // Begin Checksum
-    int calculatedChecksum = 0;
-    int sentenceChecksum = 0;
-    int packetLength = 0;
-
-    for (packetLength = 0; packetLength < strlen(response); packetLength++) // Include first char ('$') in checksum
-    {
-        if (response[packetLength] == '*')
-        {
-            // Get checksum then break
-            if (strlen(response) - packetLength > 2)
-            {
-                char hexString[2 + 1] = {0}; // Need spot for terminator
-                hexString[0] = response[packetLength + 1];
-                hexString[1] = response[packetLength + 2];
-                sentenceChecksum = (int)strtol(hexString, NULL, 16);
-            }
-            break; // Exclude * from checksum
-        }
-
-        calculatedChecksum ^= response[packetLength];
-    }
-
-    if (packetLength == strlen(response))
-        return (UM980_RESULT_MISSING_CRC);
-
-    if (calculatedChecksum != sentenceChecksum)
-    {
-        debugPrintf("Checksum failed. calculatedChecksum: %02X sentenceChecksum: %02X", calculatedChecksum,
-                    sentenceChecksum);
-        return (UM980_RESULT_BAD_CHECKSUM);
-    }
-
-    return (UM980_RESULT_OK);
-}
-
-// Discards any characters sitting in RX buffer
-void UM980::clearBuffer()
-{
-    while (serialAvailable())
-        serialRead();
-}
-
-uint16_t UM980::serialAvailable()
-{
-    if (_hwSerialPort != nullptr)
-    {
-        return (_hwSerialPort->available());
-    }
-    else if (_swSerialPort != nullptr)
-    {
-        return (_swSerialPort->available());
-    }
-    return (0);
-}
-
-uint8_t UM980::serialRead()
-{
-    if (_hwSerialPort != nullptr)
-    {
-        return (_hwSerialPort->read());
-    }
-    else if (_swSerialPort != nullptr)
-    {
-        return (_swSerialPort->read());
-    }
-    return (0);
-}
-
-void UM980::serialPrintln(const char *command)
-{
-    if (_hwSerialPort != nullptr)
-    {
-        _hwSerialPort->println(command);
-    }
-    else if (_swSerialPort != nullptr)
-    {
-        _swSerialPort->println(command);
-    }
-}
-
-// Issue the RECTIME command and parse out pertinent data
-Um980Result UM980::updateDateTime(uint16_t maxWaitMs)
-{
-    uint8_t response[500];
-    uint16_t responseLength = sizeof(response);
-    Um980Result result;
-
-    result = getResponseBinary("RECTIMEB", response, &responseLength, maxWaitMs);
-    if (result != UM980_RESULT_OK)
-        return (result);
-    // debugPrintf("Got binary result");
-
-    // Confirm message ID
     uint16_t messageID = ((uint16_t)response[offsetHeaderMessageId + 1] << 8) | response[offsetHeaderMessageId];
-    if (messageID != messageIdRectime)
-        return (UM980_RESULT_WRONG_MESSAGE_ID);
-    // debugPrintf("Good message ID");
 
-    lastUpdateDateTime = millis();
+    if (messageID == messageIdBestnav)
+    {
+        //debugPrintf("BestNav Handler");
+        CHECK_POINTER_VOID(packetBESTNAV, initBestnav); // Check that RAM has been allocated
 
-    uint8_t *data = &response[um980HeaderLength]; // Point at the start of the data fields
+        lastUpdateGeodetic = millis(); // Update stale marker
 
-    // Move data into given containers
-    memcpy(&timeStatus, &data[offsetRectimeClockStatus], sizeof(uint8_t));
-    memcpy(&timeOffset, &data[offsetRectimeOffset], sizeof(double));
-    memcpy(&timeDeviation, &data[offsetRectimeOffsetStd], sizeof(double));
-    memcpy(&year, &data[offsetRectimeUtcYear], sizeof(uint16_t));
-    memcpy(&month, &data[offsetRectimeUtcMonth], sizeof(uint8_t));
-    memcpy(&day, &data[offsetRectimeUtcDay], sizeof(uint8_t));
-    memcpy(&hour, &data[offsetRectimeUtcHour], sizeof(uint8_t));
-    memcpy(&minute, &data[offsetRectimeUtcMinute], sizeof(uint8_t));
+        uint8_t *data = &response[um980HeaderLength]; // Point at the start of the data fields
 
-    memcpy(&millisecond, &data[offsetRectimeUtcMillisecond], sizeof(uint32_t));
-    second = round(millisecond / 1000.0);
-    millisecond -= second * 1000; // Remove seconds from milliseconds
+        // Move data into given containers
 
-    memcpy(&dateStatus, &data[offsetRectimeUtcStatus], sizeof(uint8_t));
+        // 0 = Solution computed, 1 = Insufficient observation, 3 = No convergence, 4 = Covariance trace
+        memcpy(&packetBESTNAV->data.solutionStatus, &data[offsetBestnavPsolStatus], sizeof(uint8_t));
 
-    return (UM980_RESULT_OK);
+        // 0 = None, 1 = FixedPos, 8 = DopplerVelocity, 16 = Single, ...
+        memcpy(&packetBESTNAV->data.positionType, &data[offsetBestnavPosType], sizeof(uint8_t));
+        memcpy(&packetBESTNAV->data.velocityType, &data[offsetBestnavVelType], sizeof(uint8_t));
+
+        memcpy(&packetBESTNAV->data.latitude, &data[offsetBestnavLat], sizeof(double));
+        memcpy(&packetBESTNAV->data.longitude, &data[offsetBestnavLon], sizeof(double));
+        memcpy(&packetBESTNAV->data.altitude, &data[offsetBestnavHgt], sizeof(double));
+        memcpy(&packetBESTNAV->data.horizontalSpeed, &data[offsetBestnavHorSpd], sizeof(double));
+        memcpy(&packetBESTNAV->data.verticalSpeed, &data[offsetBestnavVertSpd], sizeof(double));
+        memcpy(&packetBESTNAV->data.trackGround, &data[offsetBestnavTrkGnd], sizeof(double));
+
+        memcpy(&packetBESTNAV->data.latitudeDeviation, &data[offsetBestnavLatDeviation], sizeof(float));
+        memcpy(&packetBESTNAV->data.longitudeDeviation, &data[offsetBestnavLonDeviation], sizeof(float));
+        memcpy(&packetBESTNAV->data.heightDeviation, &data[offsetBestnavHgtDeviation], sizeof(float));
+
+        memcpy(&packetBESTNAV->data.horizontalSpeedDeviation, &data[offsetBestnavHorspdStd], sizeof(float));
+        memcpy(&packetBESTNAV->data.verticalSpeedDeviation, &data[offsetBestnavVerspdStd], sizeof(float));
+
+        memcpy(&packetBESTNAV->data.satellitesTracked, &data[offsetBestnavSatsTracked], sizeof(uint8_t));
+        memcpy(&packetBESTNAV->data.satellitesUsed, &data[offsetBestnavSatsUsed], sizeof(uint8_t));
+
+        uint8_t extSolStat;
+        memcpy(&extSolStat, &data[offsetBestnavExtSolStat], sizeof(uint8_t));
+        packetBESTNAV->data.rtkSolution = extSolStat & 0x01;                   // 0 = unchecked, 1 = checked
+        packetBESTNAV->data.pseudorangeCorrection = (extSolStat >> 1) & 0b111; // Limit to three bits
+    }
+    else if (messageID == messageIdRectime)
+    {
+        //debugPrintf("RecTime Handler");
+        CHECK_POINTER_VOID(packetRECTIME, initRectime); // Check that RAM has been allocated
+
+        lastUpdateDateTime = millis();
+
+        uint8_t *data = &response[um980HeaderLength]; // Point at the start of the data fields
+
+        // Move data into given containers
+        memcpy(&packetRECTIME->data.timeStatus, &data[offsetRectimeClockStatus], sizeof(uint8_t));
+        memcpy(&packetRECTIME->data.timeOffset, &data[offsetRectimeOffset], sizeof(double));
+        memcpy(&packetRECTIME->data.timeDeviation, &data[offsetRectimeOffsetStd], sizeof(double));
+        memcpy(&packetRECTIME->data.year, &data[offsetRectimeUtcYear], sizeof(uint16_t));
+        memcpy(&packetRECTIME->data.month, &data[offsetRectimeUtcMonth], sizeof(uint8_t));
+        memcpy(&packetRECTIME->data.day, &data[offsetRectimeUtcDay], sizeof(uint8_t));
+        memcpy(&packetRECTIME->data.hour, &data[offsetRectimeUtcHour], sizeof(uint8_t));
+        memcpy(&packetRECTIME->data.minute, &data[offsetRectimeUtcMinute], sizeof(uint8_t));
+
+        memcpy(&packetRECTIME->data.millisecond, &data[offsetRectimeUtcMillisecond], sizeof(uint32_t));
+        packetRECTIME->data.second = round(packetRECTIME->data.millisecond / 1000.0);
+        packetRECTIME->data.millisecond -= (packetRECTIME->data.second * 1000); // Remove seconds from milliseconds
+
+        memcpy(&packetRECTIME->data.dateStatus, &data[offsetRectimeUtcStatus], sizeof(uint8_t));
+    }
+    else if (messageID == messageIdBestnavXyz)
+    {
+        //debugPrintf("BestNavXyz Handler");
+        CHECK_POINTER_VOID(packetBESTNAVXYZ, initBestnavXyz); // Check that RAM has been allocated
+
+        lastUpdateEcef = millis(); // Update stale marker
+
+        uint8_t *data = &response[um980HeaderLength]; // Point at the start of the data fields
+
+        // Move data into given containers
+        memcpy(&packetBESTNAVXYZ->data.ecefX, &data[offsetBestnavXyzPX], sizeof(double));
+        memcpy(&packetBESTNAVXYZ->data.ecefY, &data[offsetBestnavXyzPY], sizeof(double));
+        memcpy(&packetBESTNAVXYZ->data.ecefZ, &data[offsetBestnavXyzPZ], sizeof(double));
+
+        memcpy(&packetBESTNAVXYZ->data.ecefXDeviation, &data[offsetBestnavXyzPXDeviation], sizeof(float));
+        memcpy(&packetBESTNAVXYZ->data.ecefYDeviation, &data[offsetBestnavXyzPYDeviation], sizeof(float));
+        memcpy(&packetBESTNAVXYZ->data.ecefZDeviation, &data[offsetBestnavXyzPZDeviation], sizeof(float));
+    }
 }
 
-// Issue the BESTNAVB command and parse out pertinent data
-Um980Result UM980::updateGeodetic(uint16_t maxWaitMs)
+// Allocate RAM for packetBESTNAV and initialize it
+bool UM980::initBestnav(uint8_t rate)
 {
-    uint8_t response[500];
-    uint16_t responseLength = sizeof(response);
-    Um980Result result;
+    packetBESTNAV = new UNICORE_BESTNAV_t; // Allocate RAM for the main struct
+    if (packetBESTNAV == nullptr)
+    {
+        debugPrintf("Pointer alloc fail");
+        return (false);
+    }
+    //   packetBESTNAV->callbackPointerPtr = nullptr;
+    //   packetBESTNAV->callbackData = nullptr;
 
-    result = getResponseBinary("BESTNAVB", response, &responseLength, maxWaitMs);
-    if (result != UM980_RESULT_OK)
-        return (result);
+    // Start outputting BESTNAV in Binary on this COM port
+    char command[50];
+    snprintf(command, sizeof(command), "BESTNAVB %d", rate);
+    if (sendCommand(command) == false)
+    {
+        delete packetBESTNAV;
+        packetBESTNAV = nullptr; // Remove pointer so we will re-init next check
+        return (false);
+    }
 
-    // Confirm message ID
-    uint16_t messageID = ((uint16_t)response[offsetHeaderMessageId + 1] << 8) | response[offsetHeaderMessageId];
-    if (messageID != messageIdBestnav)
-        return (UM980_RESULT_WRONG_MESSAGE_ID);
-    // debugPrintf("Good message ID");
-
-    lastUpdateGeodetic = millis(); // Update stale marker
-
-    uint8_t *data = &response[um980HeaderLength]; // Point at the start of the data fields
-
-    // Move data into given containers
-
-    // 0 = Solution computed, 1 = Insufficient observation, 3 = No convergence, 4 = Covariance trace
-    memcpy(&solutionStatus, &data[offsetBestnavPsolStatus], sizeof(uint8_t));
-
-    // 0 = None, 1 = FixedPos, 8 = DopplerVelocity, 16 = Single, ...
-    memcpy(&positionType, &data[offsetBestnavPosType], sizeof(uint8_t));
-
-    memcpy(&latitude, &data[offsetBestnavLat], sizeof(double));
-    memcpy(&longitude, &data[offsetBestnavLon], sizeof(double));
-    memcpy(&altitude, &data[offsetBestnavHgt], sizeof(double));
-    memcpy(&latitudeDeviation, &data[offsetBestnavLatDeviation], sizeof(float));
-    memcpy(&longitudeDeviation, &data[offsetBestnavLonDeviation], sizeof(float));
-    memcpy(&heightDeviation, &data[offsetBestnavHgtDeviation], sizeof(float));
-    memcpy(&satellitesTracked, &data[offsetBestnavSatsTracked], sizeof(uint8_t));
-    memcpy(&satellitesUsed, &data[offsetBestnavSatsUsed], sizeof(uint8_t));
-
-    uint8_t extSolStat;
-    memcpy(&extSolStat, &data[offsetBestnavExtSolStat], sizeof(uint8_t));
-    rtkSolution = extSolStat & 0x01; // 0 = checked, 1 = unchecked
-    pseudorangeCorrection = extSolStat >> 1;
-
-    return (UM980_RESULT_OK);
-}
-
-// Issue the BESTNAVXYZB command and parse out pertinent data
-Um980Result UM980::updateEcef(uint16_t maxWaitMs)
-{
-    uint8_t response[500];
-    uint16_t responseLength = sizeof(response);
-    Um980Result result;
-
+    // Wait until first report is available
+    lastUpdateGeodetic = 0;
+    uint16_t maxWait = (1000 / rate) + 100; //Wait for one response to come in
     unsigned long startTime = millis();
+    while (1)
+    {
+        update(); // Call parser
+        if (lastUpdateGeodetic > 0)
+            break;
+        if (millis() - startTime > maxWait)
+        {
+            debugPrintf("GNSS: Failed to get response from BestNav start");
+            delete packetBESTNAV;
+            packetBESTNAV = nullptr;
+            return (false);
+        }
+    }
 
-    result = getResponseBinary("BESTNAVXYZB", response, &responseLength, maxWaitMs);
-    if (result != UM980_RESULT_OK)
-        return (result);
-    debugPrintf("Got binary result");
-
-    unsigned long stopTime = millis();
-
-    debugPrintf("Request time: %d", stopTime - startTime);
-
-    // Confirm message ID
-    uint16_t messageID = ((uint16_t)response[offsetHeaderMessageId + 1] << 8) | response[offsetHeaderMessageId];
-    if (messageID != messageIdBestnavXyz)
-        return (UM980_RESULT_WRONG_MESSAGE_ID);
-    debugPrintf("Good message ID");
-
-    lastUpdateEcef = millis(); // Update stale marker
-
-    uint8_t *data = &response[um980HeaderLength]; // Point at the start of the data fields
-
-    // Move data into given containers
-    memcpy(&ecefX, &data[offsetBestnavXyzPX], sizeof(double));
-    memcpy(&ecefY, &data[offsetBestnavXyzPY], sizeof(double));
-    memcpy(&ecefZ, &data[offsetBestnavXyzPZ], sizeof(double));
-
-    memcpy(&ecefXDeviation, &data[offsetBestnavXyzPXDeviation], sizeof(float));
-    memcpy(&ecefYDeviation, &data[offsetBestnavXyzPYDeviation], sizeof(float));
-    memcpy(&ecefZDeviation, &data[offsetBestnavXyzPZDeviation], sizeof(float));
-
-    memcpy(&satellitesTracked, &data[offsetBestnavXyzSatsTracked], sizeof(uint8_t));
-    memcpy(&satellitesUsed, &data[offsetBestnavXyzSatsUsed], sizeof(uint8_t));
-
-    memcpy(&solutionStatus, &data[offsetBestnavXyzPsolStatus], sizeof(uint8_t));
-    memcpy(&positionType, &data[offsetBestnavXyzPosType], sizeof(uint8_t));
-
-    uint8_t extSolStat;
-    memcpy(&extSolStat, &data[offsetBestnavXyzExtSolStat], sizeof(uint8_t));
-    rtkSolution = extSolStat & 0x01;
-    pseudorangeCorrection = extSolStat >> 1;
-
-    return (UM980_RESULT_OK);
+    return (true);
 }
 
-bool UM980::staleGeodetic()
+// Allocate RAM for packetBESTNAVXYZ and initialize it
+bool UM980::initBestnavXyz(uint8_t rate)
 {
-    if (millis() - lastUpdateGeodetic > dataFreshLimit_ms)
-        return (true);
-    return (false);
+    packetBESTNAVXYZ = new UNICORE_BESTNAVXYZ_t; // Allocate RAM for the main struct
+    if (packetBESTNAVXYZ == nullptr)
+    {
+        debugPrintf("Pointer alloc fail");
+        return (false);
+    }
+    //   packetBESTNAVXYZ->callbackPointerPtr = nullptr;
+    //   packetBESTNAVXYZ->callbackData = nullptr;
+
+    // Start outputting BESTNAVXYZ in Binary on this COM port
+    char command[50];
+    snprintf(command, sizeof(command), "BESTNAVXYZB %d", rate);
+    if (sendCommand(command) == false)
+    {
+        delete packetBESTNAVXYZ;
+        packetBESTNAVXYZ = nullptr; // Remove pointer so we will re-init next check
+        return (false);
+    }
+
+    debugPrintf("BestNavXYZB started");
+
+    // Wait until first report is available
+    lastUpdateEcef = 0;
+    uint16_t maxWait = (1000 / rate) + 100; //Wait for one response to come in
+    unsigned long startTime = millis();
+    while (1)
+    {
+        update(); // Call parser
+        if (lastUpdateEcef > 0)
+            break;
+        if (millis() - startTime > maxWait)
+        {
+            debugPrintf("GNSS: Failed to get response from BestNavXyz start");
+            delete packetBESTNAVXYZ;
+            packetBESTNAVXYZ = nullptr;
+            return (false);
+        }
+    }
+
+    return (true);
 }
 
-double UM980::getLatitude()
+// Allocate RAM for packetRECTIME and initialize it
+bool UM980::initRectime(uint8_t rate)
 {
-    if (staleGeodetic())
-        updateGeodetic();
-    return (latitude);
+    packetRECTIME = new UNICORE_RECTIME_t; // Allocate RAM for the main struct
+    if (packetRECTIME == nullptr)
+    {
+        debugPrintf("Pointer alloc fail");
+        return (false);
+    }
+    //   packetRECTIME->callbackPointerPtr = nullptr;
+    //   packetRECTIME->callbackData = nullptr;
+
+    // Start outputting RECTIME in Binary on this COM port
+    char command[50];
+    snprintf(command, sizeof(command), "RECTIMEB %d", rate);
+    if (sendCommand(command) == false)
+    {
+        delete packetRECTIME;
+        packetRECTIME = nullptr; // Remove pointer so we will re-init next check
+        return (false);
+    }
+
+    debugPrintf("RecTimeB started");
+
+    // Wait until first report is available
+    lastUpdateDateTime = 0;
+    uint16_t maxWait = (1000 / rate) + 100; //Wait for one response to come in
+    unsigned long startTime = millis();
+    while (1)
+    {
+        update(); // Call parser
+        if (lastUpdateDateTime > 0)
+            break;
+        if (millis() - startTime > maxWait)
+        {
+            debugPrintf("GNSS: Failed to get response from RecTime start");
+            delete packetRECTIME;
+            packetRECTIME = nullptr;
+            return (false);
+        }
+    }
+
+    return (true);
 }
+
+// All the general gets and sets
+//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+double UM980::getLatitude(uint16_t maxWait)
+{
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.latitude);
+}
+
 double UM980::getLongitude()
 {
-    if (staleGeodetic())
-        updateGeodetic();
-    return (longitude);
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.longitude);
 }
 double UM980::getAltitude()
 {
-    if (staleGeodetic())
-        updateGeodetic();
-    return (altitude);
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.altitude);
 }
+double UM980::getHorizontalSpeed()
+{
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.horizontalSpeed);
+}
+double UM980::getVerticalSpeed()
+{
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.verticalSpeed);
+}
+double UM980::getTrackGround()
+{
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.trackGround);
+}
+
 float UM980::getLatitudeDeviation()
 {
-    if (staleGeodetic())
-        updateGeodetic();
-    return (latitudeDeviation);
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.latitudeDeviation);
 }
 float UM980::getLongitudeDeviation()
 {
-    if (staleGeodetic())
-        updateGeodetic();
-    return (longitudeDeviation);
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.longitudeDeviation);
 }
 float UM980::getAltitudeDeviation()
 {
-    if (staleGeodetic())
-        updateGeodetic();
-    return (heightDeviation);
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.heightDeviation);
 }
-
-bool UM980::staleEcef()
+float UM980::getHorizontalSpeedDeviation()
 {
-    if (millis() - lastUpdateEcef > dataFreshLimit_ms)
-        return (true);
-    return (false);
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.horizontalSpeedDeviation);
 }
-
-double UM980::getEcefX()
+float UM980::getVerticalSpeedDeviation()
 {
-    if (staleEcef())
-        updateEcef();
-    return (ecefX);
-}
-double UM980::getEcefY()
-{
-    if (staleEcef())
-        updateEcef();
-    return (ecefY);
-}
-double UM980::getEcefZ()
-{
-    if (staleEcef())
-        updateEcef();
-    return (ecefZ);
-}
-float UM980::getEcefXDeviation()
-{
-    if (staleEcef())
-        updateEcef();
-    return (ecefXDeviation);
-}
-float UM980::getEcefYDeviation()
-{
-    if (staleEcef())
-        updateEcef();
-    return (ecefYDeviation);
-}
-float UM980::getEcefZDeviation()
-{
-    if (staleEcef())
-        updateEcef();
-    return (ecefZDeviation);
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.verticalSpeedDeviation);
 }
 
 uint8_t UM980::getSIV()
 {
     return (getSatellitesTracked());
 }
-uint8_t UM980::getSatellitesUsed()
-{
-    if (staleGeodetic())
-        updateGeodetic();
-    return (satellitesUsed);
-}
 uint8_t UM980::getSatellitesTracked()
 {
-    if (staleGeodetic())
-        updateGeodetic();
-    return (satellitesTracked);
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.satellitesTracked);
+}
+uint8_t UM980::getSatellitesUsed()
+{
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.satellitesUsed);
 }
 
 // 0 = Solution computed, 1 = Insufficient observation, 3 = No convergence, 4 = Covariance trace
 uint8_t UM980::getSolutionStatus()
 {
-    if (staleGeodetic())
-        updateGeodetic();
-    return (solutionStatus);
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.solutionStatus);
 }
 
-// 0 = no fix, 1 = dead reckoning only, 2 = 2D-fix, 3 = 3D-fix, 4 = GNSS + dead reckoning combined, 5 = time only fix
+// 0 = no fix, 1 = dead reckoning only, 2 = 2D-fix, 3 = 3D-fix, 4 = GNSS + dead reckoning combined, 5 = time only
+// fix
 uint8_t UM980::getPositionType()
 {
-    if (staleGeodetic())
-        updateGeodetic();
-    return (positionType);
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.positionType);
+}
+uint8_t UM980::getVelocityType()
+{
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.velocityType);
 }
 
 uint8_t UM980::getRTKSolution()
 {
-    if (staleGeodetic())
-        updateGeodetic();
-    return (rtkSolution);
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.rtkSolution);
 }
 uint8_t UM980::getPseudorangeCorrection()
 {
-    if (staleGeodetic())
-        updateGeodetic();
-    return (pseudorangeCorrection);
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return (packetBESTNAV->data.pseudorangeCorrection);
 }
 
-bool UM980::staleDateTime()
+// Return the number of millis since last update
+uint32_t UM980::getFixAgeMilliseconds()
 {
-    if (millis() - lastUpdateDateTime > dataFreshLimit_ms)
-        return (true);
-    return (false);
+    return (millis() - lastUpdateGeodetic);
+}
+
+double UM980::getEcefX()
+{
+    CHECK_POINTER_BOOL(packetBESTNAVXYZ, initBestnavXyz); // Check that RAM has been allocated
+    return (packetBESTNAVXYZ->data.ecefX);
+}
+double UM980::getEcefY()
+{
+    CHECK_POINTER_BOOL(packetBESTNAVXYZ, initBestnavXyz); // Check that RAM has been allocated
+    return (packetBESTNAVXYZ->data.ecefY);
+}
+double UM980::getEcefZ()
+{
+    CHECK_POINTER_BOOL(packetBESTNAVXYZ, initBestnavXyz); // Check that RAM has been allocated
+    return (packetBESTNAVXYZ->data.ecefZ);
+}
+float UM980::getEcefXDeviation()
+{
+    CHECK_POINTER_BOOL(packetBESTNAVXYZ, initBestnavXyz); // Check that RAM has been allocated
+    return (packetBESTNAVXYZ->data.ecefXDeviation);
+}
+float UM980::getEcefYDeviation()
+{
+    CHECK_POINTER_BOOL(packetBESTNAVXYZ, initBestnavXyz); // Check that RAM has been allocated
+    return (packetBESTNAVXYZ->data.ecefYDeviation);
+}
+float UM980::getEcefZDeviation()
+{
+    CHECK_POINTER_BOOL(packetBESTNAVXYZ, initBestnavXyz); // Check that RAM has been allocated
+    return (packetBESTNAVXYZ->data.ecefZDeviation);
 }
 
 uint16_t UM980::getYear()
 {
-    if (staleDateTime())
-        updateDateTime();
-    return (year);
+    CHECK_POINTER_BOOL(packetRECTIME, initRectime); // Check that RAM has been allocated
+    return (packetRECTIME->data.year);
 }
 uint8_t UM980::getMonth()
 {
-    if (staleDateTime())
-        updateDateTime();
-    return (month);
+    CHECK_POINTER_BOOL(packetRECTIME, initRectime); // Check that RAM has been allocated
+    return (packetRECTIME->data.month);
 }
 uint8_t UM980::getDay()
 {
-    if (staleDateTime())
-        updateDateTime();
-    return (day);
+    CHECK_POINTER_BOOL(packetRECTIME, initRectime); // Check that RAM has been allocated
+    return (packetRECTIME->data.day);
 }
 uint8_t UM980::getHour()
 {
-    if (staleDateTime())
-        updateDateTime();
-    return (hour);
+    CHECK_POINTER_BOOL(packetRECTIME, initRectime); // Check that RAM has been allocated
+    return (packetRECTIME->data.hour);
 }
 uint8_t UM980::getMinute()
 {
-    if (staleDateTime())
-        updateDateTime();
-    return (minute);
+    CHECK_POINTER_BOOL(packetRECTIME, initRectime); // Check that RAM has been allocated
+    return (packetRECTIME->data.minute);
 }
 uint8_t UM980::getSecond()
 {
-    if (staleDateTime())
-        updateDateTime();
-    return (second);
+    CHECK_POINTER_BOOL(packetRECTIME, initRectime); // Check that RAM has been allocated
+    return (packetRECTIME->data.second);
 }
 uint16_t UM980::getMillisecond()
 {
-    if (staleDateTime())
-        updateDateTime();
-    return (second);
+    CHECK_POINTER_BOOL(packetRECTIME, initRectime); // Check that RAM has been allocated
+    return (packetRECTIME->data.millisecond);
 }
 
 uint8_t UM980::getTimeStatus()
 {
-    if (staleDateTime())
-        updateDateTime();
-    return (timeStatus);
+    CHECK_POINTER_BOOL(packetRECTIME, initRectime); // Check that RAM has been allocated
+    return (packetRECTIME->data.timeStatus);
 }
 uint8_t UM980::getDateStatus()
 {
-    if (staleDateTime())
-        updateDateTime();
-    return (dateStatus);
+    CHECK_POINTER_BOOL(packetRECTIME, initRectime); // Check that RAM has been allocated
+    return (packetRECTIME->data.dateStatus);
 }
 
 // Receiver clock offset relative to GPS time, s.
-// Positive indicates that the receiver clock is ahead of GPS time. To calculate the GPS time, use the formula below:
-// GPS time = receiver time - clock offset
+// Positive indicates that the receiver clock is ahead of GPS time. To calculate the GPS time, use the formula
+// below: GPS time = receiver time - clock offset
 double UM980::getTimeOffset()
 {
-    if (staleDateTime())
-        updateDateTime();
-    return (timeOffset);
+    CHECK_POINTER_BOOL(packetRECTIME, initRectime); // Check that RAM has been allocated
+    return (packetRECTIME->data.timeOffset);
 }
 
 // Standard deviation of the receiver clock offset, s.
 double UM980::getTimeOffsetDeviation()
 {
-    if (staleDateTime())
-        updateDateTime();
-    return (timeDeviation);
-}
-
-// Return the number of millis since last updateGeodetic()
-uint32_t UM980::getFixAgeMilliseconds()
-{
-    if (staleGeodetic())
-        updateGeodetic();
-    return (millis() - lastUpdateGeodetic);
+    CHECK_POINTER_BOOL(packetRECTIME, initRectime); // Check that RAM has been allocated
+    return (packetRECTIME->data.timeDeviation);
 }
