@@ -1,13 +1,13 @@
 /*
-  Sending direct commands to the UM980 GNSS receiver
+  Enable NMEA out COM1 (USB-C) for viewing in u-center (u-blox's software) or UPrecise (Unicore's software)
   By: Nathan Seidle
   SparkFun Electronics
   Date: October 2nd, 2023
   License: MIT. Please see LICENSE.md for more information.
 
-  While the SparkFun UM980 Arduino library covers most of the features in the UM980, there
-  may be a special command that is needed but not supported. This sketch shows how to send commands direct.
-  
+  This sketch turns on all the major NMEA setences at 2Hz and prints the
+  incoming serial out the Serial port. This is useful for viewing the GNSS
+  data in a program like u-center.
   These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
 
@@ -37,7 +37,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("UM980 comm over ESP UART1");
+  Serial.println("SparkFun UM980 Example");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);
@@ -46,23 +46,38 @@ void setup()
 
   if (myGNSS.begin(SerialGNSS) == false) //Give the serial port over to the library
   {
-    Serial.println("UM980 failed to respond. Check ports and baud rates.");
-    while (1);
+    Serial.println("UM980 failed to respond. Check ports and baud rates. Freezing...");
+    while (true);
   }
   Serial.println("UM980 detected!");
 
-  //Turn off all NMEA, RTCM, and any other message that may be reporting periodically
-  myGNSS.disableOutput();
+  bool response = true;
 
-  //sendCommand() sends the string directly and checks for the OK response
-  //Returns true if the OK was detected
-  if(myGNSS.sendCommand("UNMASK GPS") == true) Serial.println("GPS enabled");
-  else Serial.println("GPS unmask error");
+  //Turn off all NMEA, RTCM, and any other messages that may be reporting periodic
+  response &= myGNSS.disableOutput();
 
-  myGNSS.sendCommand("MASK 10 GPS"); //Set the elevation mask angle as 10 degrees for GPS
+  float outputRate = 0.5; //0.5 = 2 reports per second.
+
+  char comPort[] = "COM1";
+  response &= myGNSS.setNMEAPortMessage("GPGGA", comPort, outputRate);
+  response &= myGNSS.setNMEAPortMessage("GPGSA", comPort, outputRate);
+  response &= myGNSS.setNMEAPortMessage("GPGST", comPort, outputRate);
+  response &= myGNSS.setNMEAPortMessage("GPGSV", comPort, outputRate);
+  response &= myGNSS.setNMEAPortMessage("GPRMC", comPort, outputRate);
+  response &= myGNSS.saveConfiguration(); //Save the current configuration into non-volatile memory (NVM)
+
+  //If any one command fails, it will force response to false
+  if(response == false)
+  {
+    Serial.println("UM980 failed to configure. Freezing...");
+    while(true);
+  }
+
+  Serial.println("NMEA now reporting on USB-C serial port");
 }
 
 void loop()
 {
-
+  while(SerialGNSS.available())
+    Serial.write(SerialGNSS.read());
 }

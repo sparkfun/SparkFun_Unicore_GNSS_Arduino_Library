@@ -35,7 +35,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("UM980 comm over ESP UART1");
+  Serial.println("SparkFun UM980 Example");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);
@@ -51,8 +51,8 @@ void setup()
 
   myGNSS.disableOutput(); //Turn off all messages on this port during configuration
 
-  //Set the output rate of NMEA messages. Users can set both of the message type and update rate.
-  //Configure the port we are currently commuicating with on the UM980 (the ESP32 is connected to COM2)
+  //Set the output rate of NMEA messages. Users can set both the message type and update rate.
+  //Configure the port we are currently communicating with on the UM980 (the ESP32 is connected to COM2)
   //1, 0.5, 0.2, 0.1, 0.05 corresponds to 1Hz, 2Hz, 5Hz, 10Hz, 20Hz respectively.
   //1, 2, 5 corresponds to 1Hz, 0.5Hz, 0.2Hz respectively.
   myGNSS.setNMEAMessage("GPGGA", 1); //Message type, 1 report per second.
@@ -61,7 +61,7 @@ void setup()
   myGNSS.setNMEAMessage("GPRMC", 1); //Message type, 1 report per second.
   myGNSS.setNMEAMessage("GPGSV", 1); //Message type, 1 report per second.
 
-  //When the coordinates of base station are known, users can set the position
+  //When the coordinates of the base station are known, users can set the position
   //using Geodetic or ECEF coordinates.
   myGNSS.setModeBaseGeodetic(40.09029479, -105.18505761, 1560.089); //SparkFun HQ
   //myGNSS.setModeBaseECEF(-1280206.568, -4716804.403, 4086665.484); //SparkFun HQ
@@ -85,7 +85,7 @@ void setup()
 
 void loop()
 {
-  //Read in NMEA from the UM980
+  //Read in NMEA and RTCM from the UM980
   while (SerialGNSS.available())
     Serial.write(SerialGNSS.read());
 }

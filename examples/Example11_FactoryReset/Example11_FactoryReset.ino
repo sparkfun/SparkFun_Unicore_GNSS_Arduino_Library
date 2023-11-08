@@ -5,7 +5,7 @@
   Date: October 2nd, 2023
   License: MIT. Please see LICENSE.md for more information.
 
-  This example shows how set the UM980 back to defaults.
+  This example shows how to set the UM980 back to defaults.
   These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
 
@@ -35,7 +35,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("UM980 comm over ESP UART1");
+  Serial.println("SparkFun UM980 Example");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);
@@ -59,13 +59,15 @@ void setup()
   else
     Serial.println("Error resetting UM980 to factory defaults");
 
-  Serial.println("Waiting for device to reboot");
+  Serial.println("Waiting for UM980 to reboot");
+
   while (1)
   {
     delay(1000); //Wait for device to reboot
     if (myGNSS.isConnected() == true) break;
     else Serial.println("Device still rebooting");
   }
+
   Serial.println("UM980 has completed reset");
 
 

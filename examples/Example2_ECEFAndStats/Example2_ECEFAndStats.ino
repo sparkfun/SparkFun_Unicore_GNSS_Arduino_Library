@@ -37,7 +37,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("UM980 comm over ESP UART1");
+  Serial.println("SparkFun UM980 Example");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);
@@ -54,7 +54,9 @@ void setup()
 
 void loop()
 {
-  if (millis() - lastCheck > 2000)
+  myGNSS.update(); //Regularly call to parse any new data
+
+  if (millis() - lastCheck > 1000)
   {
     lastCheck = millis();
 
@@ -153,9 +155,9 @@ void loop()
     Serial.print(pseudorangeCorrection);
     Serial.print(" - ");
     if (pseudorangeCorrection == 0) Serial.print("Unknown");
-    else if (pseudorangeCorrection == 0x01) Serial.print("Klobuchar broadcast ephemeris correction");
-    else if (pseudorangeCorrection == 0x10) Serial.print("SBAS ionospheric grid correction");
-    else if (pseudorangeCorrection == 0x11) Serial.print("Multi-frequency correction");
+    else if (pseudorangeCorrection == 0x001) Serial.print("Klobuchar broadcast ephemeris correction");
+    else if (pseudorangeCorrection == 0x010) Serial.print("SBAS ionospheric grid correction");
+    else if (pseudorangeCorrection == 0x011) Serial.print("Multi-frequency correction");
     else if (pseudorangeCorrection == 0x100) Serial.print("Pseudorange differential correction");
     else Serial.print("Unknown");
     Serial.println();

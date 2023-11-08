@@ -1,5 +1,5 @@
 /*
-  Setting messages on different ports on the UM980.
+  Enable NMEA messages on different ports on the UM980.
   By: Nathan Seidle
   SparkFun Electronics
   Date: October 2nd, 2023
@@ -8,6 +8,8 @@
   This example shows how to enable various NMEA sentences, at different rates, on different ports.
   These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
+
+  This example pipes all NMEA sentences to the UART.
 
   Feel like supporting open source hardware?
   Buy a board from SparkFun!
@@ -35,7 +37,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("UM980 comm over ESP UART1");
+  Serial.println("SparkFun UM980 Example");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);
@@ -49,10 +51,10 @@ void setup()
   }
   Serial.println("UM980 detected!");
 
-  //Set the output rate of NMEA messages. Users can set both of the message type and update rate.
+  //Set the output rate of NMEA messages. Users can set both the message type and update rate.
   //1, 0.5, 0.2, 0.1, 0.05 corresponds to 1Hz, 2Hz, 5Hz, 10Hz, 20Hz respectively.
   //1, 2, 5 corresponds to 1Hz, 0.5Hz, 0.2Hz respectively.
-  //Configure the port we are currently commuicating with on the UM980 (the ESP32 is connected to COM2)
+  //Configure the port we are currently communicating with on the UM980 (the ESP32 is connected to COM2)
   myGNSS.setNMEAMessage("GPGGA", 1); //Message type, 1 report per second.
   myGNSS.setNMEAMessage("GPGSA", 1); //Message type, 1 report per second.
   myGNSS.setNMEAMessage("GPGST", 1); //Message type, 1 report per second.
