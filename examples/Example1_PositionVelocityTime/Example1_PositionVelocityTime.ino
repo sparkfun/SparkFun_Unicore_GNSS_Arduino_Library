@@ -6,7 +6,7 @@
   License: MIT. Please see LICENSE.md for more information.
 
   This example shows how to query a UM980 GNSS module for its position and time data.
-  These examples are targeted for an ESP32 platform but any platform that has multiple 
+  These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
 
   Note: Lat/Lon are doubles and the UM980 outputs 11 digits after the decimal.
@@ -67,11 +67,11 @@ void loop()
     //By default, this data is updated once per second.
 
     Serial.print("Lat/Long/Alt: ");
-    Serial.print(myGNSS.getLatitude(), 11);
+    Serial.print(myGNSS.getLatitude(), 11); //Accurate 11 decimal places
     Serial.print("/");
     Serial.print(myGNSS.getLongitude(), 11);
     Serial.print("/");
-    Serial.print(myGNSS.getAltitude(), 4);
+    Serial.print(myGNSS.getAltitude(), 4); //Accurate to 4 decimal places
     Serial.println();
 
     Serial.print("Horizontal Speed: ");
@@ -86,15 +86,32 @@ void loop()
     Serial.print("Date (yyyy/mm/dd): ");
     Serial.print(myGNSS.getYear());
     Serial.print("/");
+    if (myGNSS.getMonth() < 10)
+      Serial.print("0");
     Serial.print(myGNSS.getMonth());
     Serial.print("/");
+    if (myGNSS.getDay() < 10)
+      Serial.print("0");
     Serial.print(myGNSS.getDay());
+
     Serial.print(" Time (hh:mm:dd): ");
+    if (myGNSS.getHour() < 10)
+      Serial.print("0");
     Serial.print(myGNSS.getHour());
     Serial.print(":");
+    if (myGNSS.getMinute() < 10)
+      Serial.print("0");
     Serial.print(myGNSS.getMinute());
     Serial.print(":");
+    if (myGNSS.getSecond() < 10)
+      Serial.print("0");
     Serial.print(myGNSS.getSecond());
+    Serial.print(".");
+    if (myGNSS.getMillisecond() < 100)
+      Serial.print("0");
+    if (myGNSS.getMillisecond() < 10)
+      Serial.print("0");
+    Serial.print(myGNSS.getMillisecond());
     Serial.println();
 
     Serial.print("Satellites in view: ");

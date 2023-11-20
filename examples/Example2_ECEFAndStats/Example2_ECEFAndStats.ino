@@ -70,21 +70,21 @@ void loop()
     Serial.print("/");
     Serial.println(myGNSS.getAltitude(), 4);
 
-    Serial.print("Deviation of Lat/Long/Alt: ");
+    Serial.print("Deviation of Lat/Long/Alt (m): ");
     Serial.print(myGNSS.getLatitudeDeviation(), 4);
     Serial.print("/");
     Serial.print(myGNSS.getLongitudeDeviation(), 4);
     Serial.print("/");
     Serial.println(myGNSS.getAltitudeDeviation(), 4);
 
-    Serial.print("ECEF X/Y/Z: ");
+    Serial.print("ECEF X/Y/Z (m): ");
     Serial.print(myGNSS.getEcefX(), 4);
     Serial.print("/");
     Serial.print(myGNSS.getEcefY(), 4);
     Serial.print("/");
     Serial.println(myGNSS.getEcefZ(), 4);
 
-    Serial.print("Deviation of ECEF X/Y/Z: ");
+    Serial.print("Deviation of ECEF X/Y/Z (m): ");
     Serial.print(myGNSS.getEcefXDeviation(), 4);
     Serial.print("/");
     Serial.print(myGNSS.getEcefYDeviation(), 4);
@@ -94,12 +94,16 @@ void loop()
     Serial.print("Date (yyyy/mm/dd): ");
     Serial.print(myGNSS.getYear());
     Serial.print("/");
+    if (myGNSS.getMonth() < 10)
+      Serial.print("0");
     Serial.print(myGNSS.getMonth());
     Serial.print("/");
-    Serial.println(myGNSS.getDay());
+    if (myGNSS.getDay() < 10)
+      Serial.print("0");
+    Serial.print(myGNSS.getDay());
 
     int timeStatus = myGNSS.getTimeStatus();
-    Serial.print("Time status: ");
+    Serial.print(" Time status: ");
     Serial.print(timeStatus);
     Serial.print(" - ");
     if (timeStatus == 0) Serial.print("Valid");
