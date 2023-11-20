@@ -51,6 +51,8 @@ void setup()
   }
   Serial.println("UM980 detected!");
 
+  myGNSS.disableOutput(); // Disables all messages on this port
+
   //Set the output rate of NMEA messages. Users can set both the message type and update rate.
   //1, 0.5, 0.2, 0.1, 0.05 corresponds to 1Hz, 2Hz, 5Hz, 10Hz, 20Hz respectively.
   //1, 2, 5 corresponds to 1Hz, 0.5Hz, 0.2Hz respectively.
@@ -71,6 +73,8 @@ void setup()
   myGNSS.setNMEAPortMessage("GPGSV", comName, 1); //Limit GSV to 1Hz
 
   myGNSS.saveConfiguration(); //Save the current configuration into non-volatile memory (NVM)
+
+  Serial.println("Wait for UM980 to get fix and output NMEA...");
 }
 
 void loop()

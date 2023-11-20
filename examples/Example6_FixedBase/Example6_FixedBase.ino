@@ -76,11 +76,13 @@ void setup()
   myGNSS.setRTCMMessage("RTCM1124", 1);
   myGNSS.setRTCMMessage("RTCM1033", 10);
 
-  myGNSS.setRTCMMessage("RTCM1033", 0); //Disable a specific message
+  //myGNSS.setRTCMMessage("RTCM1033", 0); //Disable a specific message
 
-  myGNSS.setRTCMMessage("RTCM1074", "COM1", 1); //Enable message on a specific port
+  //myGNSS.setRTCMPortMessage("RTCM1074", "COM1", 1); //Enable message on a specific port
 
   myGNSS.saveConfiguration(); //Save the current configuration into non-volatile memory (NVM)
+
+  Serial.println("Output will be a mix of NMEA and binary RTCM non-visible characters");
 }
 
 void loop()

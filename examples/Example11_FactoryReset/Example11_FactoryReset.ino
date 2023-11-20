@@ -30,6 +30,8 @@ UM980 myGNSS;
 
 HardwareSerial SerialGNSS(1); //Use UART1 on the ESP32
 
+unsigned long lastCheck = 0;
+
 void setup()
 {
   Serial.begin(115200);
@@ -49,9 +51,9 @@ void setup()
   }
   Serial.println("UM980 detected!");
 
-  while(Serial.available()) Serial.read(); //Clear RX buffer
+  while (Serial.available()) Serial.read(); //Clear RX buffer
   Serial.println("Press any key to factory reset the UM980");
-  while(Serial.available() == 0) delay(1); //Wait for user to press a button
+  while (Serial.available() == 0) delay(1); //Wait for user to press a button
 
   // Clear saved configurations, satellite ephemerides, position information, and reset baud rate to 115200bps.
   if (myGNSS.factoryReset() == true)
@@ -70,7 +72,6 @@ void setup()
 
   Serial.println("UM980 has completed reset");
 
-
   // Resetting the receiver will clear the satellite ephemerides, position information, satellite
   // almanacs, ionosphere parameters and UTC parameters saved in the receiver.
   //myGNSS.reset();
@@ -84,5 +85,61 @@ void setup()
 
 void loop()
 {
-  //Do nothing
+  myGNSS.update(); //Regularly call to parse any new data
+
+  if (millis() - lastCheck > 1000)
+  {
+    lastCheck = millis();
+
+    //The get methods are updated whenever new data is parsed with the update() call.
+    //By default, this data is updated once per second.
+
+    Serial.print("Lat/Long/Alt: ");
+    Serial.print(myGNSS.getLatitude(), 11);
+    Serial.print("/");
+    Serial.print(myGNSS.getLongitude(), 11);
+    Serial.print("/");
+    Serial.print(myGNSS.getAltitude(), 4);
+    Serial.println();
+
+    Serial.print("Horizontal Speed: ");
+    Serial.print(myGNSS.getHorizontalSpeed());
+    Serial.print("m/s Vertical Speed: ");
+    Serial.print(myGNSS.getVerticalSpeed());
+    Serial.print("m/s Direction from North: ");
+    Serial.print(myGNSS.getTrackGround());
+    Serial.print("(degrees)");
+    Serial.println();
+
+    Serial.print("Date (yyyy/mm/dd): ");
+    Serial.print(myGNSS.getYear());
+    Serial.print("/");
+    if (myGNSS.getMonth() < 10)
+      Serial.print("0");
+    Serial.print(myGNSS.getMonth());
+    Serial.print("/");
+    if (myGNSS.getDay() < 10)
+      Serial.print("0");
+    Serial.print(myGNSS.getDay());
+
+    Serial.print(" Time (hh:mm:dd): ");
+    if (myGNSS.getHour() < 10)
+      Serial.print("0");
+    Serial.print(myGNSS.getHour());
+    Serial.print(":");
+    if (myGNSS.getMinute() < 10)
+      Serial.print("0");
+    Serial.print(myGNSS.getMinute());
+    Serial.print(":");
+    if (myGNSS.getSecond() < 10)
+      Serial.print("0");
+    Serial.print(myGNSS.getSecond());
+    Serial.println();
+
+    Serial.print("Satellites in view: ");
+    Serial.print(myGNSS.getSIV());
+    Serial.println();
+
+    Serial.println();
+  }
 }

@@ -49,6 +49,8 @@ void setup()
   }
   Serial.println("UM980 detected!");
 
+  myGNSS.disableOutput(); // Disables all messages on this port
+
   //Configure the port on the UM980 we are currently commuicating with
   myGNSS.setRTCMMessage("RTCM1005", 1); //Message type, 1 report per second.
 
@@ -59,11 +61,12 @@ void setup()
   myGNSS.setRTCMPortMessage("RTCM1093", "COM1", 0); //Disable given message on a given port
 
   myGNSS.saveConfiguration(); //Save the current configuration into non-volatile memory (NVM)
+
+  Serial.println("RTCM is in binary so printing it will show random characters");
 }
 
 void loop()
 {
-  //RTCM is in binary so printing it to the serial terminal will not show anything legible
-  //  while (SerialGNSS.available())
-  //    Serial.write(SerialGNSS.read());
+  while (SerialGNSS.available())
+    Serial.write(SerialGNSS.read());
 }
