@@ -142,6 +142,7 @@ class UM980
 
     bool staleDateTime();
     bool staleEcef();
+    void stopAutoReports(); //Delete all pointers to force reinit next time a helper function is called
 
     Um980Result getGeodetic(uint16_t maxWaitMs = 1500);
     Um980Result updateEcef(uint16_t maxWaitMs = 1500);

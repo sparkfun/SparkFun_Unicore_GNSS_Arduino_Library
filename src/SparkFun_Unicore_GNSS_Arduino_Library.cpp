@@ -102,7 +102,7 @@ bool UM980::isConnected()
 {
     for (int x = 0; x < 3; x++)
     {
-        serialPrintln("UNLOG"); // Blindly tell unit to stop transmitting
+        disableOutput(); // Tell unit to stop transmitting
 
         // Wait until serial stops coming in
         uint16_t maxTime = 500;
@@ -511,16 +511,42 @@ bool UM980::setRTCMMessage(const char *sentenceType, float outputRate)
 // Warning, each message has to be individually re-enabled
 bool UM980::disableOutput()
 {
+    stopAutoReports(); // Remove pointers so we will re-init next check
+
     return (sendCommand("UNLOG"));
 }
 
 // Disable all messages on a given port
 bool UM980::disableOutputPort(const char *comName)
 {
+    //We don't know if this is the COM port we are communicating on, so err on the side of caution.
+    stopAutoReports(); // Remove pointers so we will re-init next check
+
     char command[50];
     snprintf(command, sizeof(command), "UNLOG %s", comName);
 
     return (sendCommand(command));
+}
+
+// We've issued an unlog, so the binary messages will no longer be coming in automatically
+// Turn off pointers so the next time a getLatitude() is issued, the associated messsage is reinit'd
+void UM980::stopAutoReports()
+{
+    if (packetBESTNAV != nullptr)
+    {
+        delete packetBESTNAV;
+        packetBESTNAV = nullptr;
+    }
+    if (packetBESTNAVXYZ != nullptr)
+    {
+        delete packetBESTNAVXYZ;
+        packetBESTNAVXYZ = nullptr;
+    }
+    if (packetRECTIME != nullptr)
+    {
+        delete packetRECTIME;
+        packetRECTIME = nullptr;
+    }
 }
 
 // Clear saved configurations, satellite ephemerides, position information, and reset baud rate to 115200bps.
@@ -789,7 +815,7 @@ void UM980::unicoreHandler(uint8_t *response, uint16_t length)
 
     if (messageID == messageIdBestnav)
     {
-        //debugPrintf("BestNav Handler");
+        debugPrintf("BestNav Handler");
         CHECK_POINTER_VOID(packetBESTNAV, initBestnav); // Check that RAM has been allocated
 
         lastUpdateGeodetic = millis(); // Update stale marker
@@ -829,7 +855,7 @@ void UM980::unicoreHandler(uint8_t *response, uint16_t length)
     }
     else if (messageID == messageIdRectime)
     {
-        //debugPrintf("RecTime Handler");
+        debugPrintf("RecTime Handler");
         CHECK_POINTER_VOID(packetRECTIME, initRectime); // Check that RAM has been allocated
 
         lastUpdateDateTime = millis();
@@ -854,7 +880,7 @@ void UM980::unicoreHandler(uint8_t *response, uint16_t length)
     }
     else if (messageID == messageIdBestnavXyz)
     {
-        //debugPrintf("BestNavXyz Handler");
+        // debugPrintf("BestNavXyz Handler");
         CHECK_POINTER_VOID(packetBESTNAVXYZ, initBestnavXyz); // Check that RAM has been allocated
 
         lastUpdateEcef = millis(); // Update stale marker
@@ -894,9 +920,11 @@ bool UM980::initBestnav(uint8_t rate)
         return (false);
     }
 
+    debugPrintf("BestNav started");
+
     // Wait until first report is available
     lastUpdateGeodetic = 0;
-    uint16_t maxWait = (1000 / rate) + 100; //Wait for one response to come in
+    uint16_t maxWait = (1000 / rate) + 100; // Wait for one response to come in
     unsigned long startTime = millis();
     while (1)
     {
@@ -941,7 +969,7 @@ bool UM980::initBestnavXyz(uint8_t rate)
 
     // Wait until first report is available
     lastUpdateEcef = 0;
-    uint16_t maxWait = (1000 / rate) + 100; //Wait for one response to come in
+    uint16_t maxWait = (1000 / rate) + 100; // Wait for one response to come in
     unsigned long startTime = millis();
     while (1)
     {
@@ -972,6 +1000,8 @@ bool UM980::initRectime(uint8_t rate)
     //   packetRECTIME->callbackPointerPtr = nullptr;
     //   packetRECTIME->callbackData = nullptr;
 
+    debugPrintf("RecTime started");
+
     // Start outputting RECTIME in Binary on this COM port
     char command[50];
     snprintf(command, sizeof(command), "RECTIMEB %d", rate);
@@ -986,7 +1016,7 @@ bool UM980::initRectime(uint8_t rate)
 
     // Wait until first report is available
     lastUpdateDateTime = 0;
-    uint16_t maxWait = (1000 / rate) + 100; //Wait for one response to come in
+    uint16_t maxWait = (1000 / rate) + 100; // Wait for one response to come in
     unsigned long startTime = millis();
     while (1)
     {
