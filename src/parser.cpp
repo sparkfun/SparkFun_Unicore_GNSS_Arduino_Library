@@ -43,7 +43,7 @@ void um980EomHandler(UNICORE_PARSE_STATE *parse)
     }
     else if (parse->messageType == SFE_SENTENCE_TYPE_NMEA)
     {
-        //NMEA Handler
+        // NMEA Handler
     }
     else if (parse->messageType == SFE_SENTENCE_TYPE_UNICORE_BINARY)
     {
@@ -51,7 +51,7 @@ void um980EomHandler(UNICORE_PARSE_STATE *parse)
     }
     else if (parse->messageType == SFE_SENTENCE_TYPE_RTCM)
     {
-        //RTCM handler
+        // RTCM handler
     }
 }
 
@@ -272,13 +272,20 @@ void um980NmeaLineTermination(UNICORE_PARSE_STATE *parse, uint8_t data)
         else
         {
             if (parse->messageType == SFE_SENTENCE_TYPE_NMEA)
+            {
                 ptrUM980->debugPrintf("Bad CRC on NMEA.");
+                ptrUM980->debugPrintf("Expecting: 0x%02X Found: 0x%02X.", checksum, parse->check);
+            }
             else if (parse->messageType == SFE_SENTENCE_TYPE_UNICORE_POUND_RESPONSE)
+            {
                 ptrUM980->debugPrintf("Bad CRC on Unicore # Response.");
+                ptrUM980->debugPrintf("Expecting: 0x%02X Found: 0x%02X.", checksum, parse->check);
+            }
             else if (parse->messageType == SFE_SENTENCE_TYPE_UNICORE_COMMAND_RESPONSE)
+            {
                 ptrUM980->debugPrintf("Bad CRC on Unicore Command.");
-
-            ptrUM980->debugPrintf("Expecting: 0x%08X Found: 0x%08X.", checksum, parse->check);
+                ptrUM980->debugPrintf("Expecting: 0x%08X Found: 0x%08X.", checksum, parse->check);
+            }
 
             parse->messageType = SFE_SENTENCE_TYPE_NONE;
         }
@@ -402,7 +409,7 @@ void um980UnicoreReadData(UNICORE_PARSE_STATE *parse, uint8_t data)
     else
     {
         ptrUM980->debugPrintf("Unicore CRC failed. Sentence CRC: 0x%02X Calculated CRC: 0x%02X\r\n", sentenceCRC,
-                      calculatedCRC);
+                              calculatedCRC);
     }
 
     // Search for another preamble byte
@@ -518,7 +525,7 @@ void um980RtcmReadCrc(UNICORE_PARSE_STATE *parse, uint8_t data)
     else
     {
         ptrUM980->debugPrintf("RTCM CRC failed length: %d sentence CRC: 0x%02X calc CRC: 0x%02X\r\n", parse->length,
-                      sentenceCRC, parse->check);
+                              sentenceCRC, parse->check);
     }
 
     // Search for another preamble byte
