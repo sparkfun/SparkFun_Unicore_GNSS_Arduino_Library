@@ -60,6 +60,7 @@ void setup()
   response &= myGNSS.disableOutput();
 
   Serial.println("All characters now being echoed to UM980");
+  Serial.println("Send CONFIG to see the current configuration");
   Serial.println("Be sure both NL & CR is turned on!");
 }
 

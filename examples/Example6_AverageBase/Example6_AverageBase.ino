@@ -78,9 +78,9 @@ void setup()
   myGNSS.setRTCMMessage("RTCM1124", 1);
   myGNSS.setRTCMMessage("RTCM1033", 10);
 
-  myGNSS.setRTCMMessage("RTCM1033", 0); //Disable a specific message
+  //myGNSS.setRTCMMessage("RTCM1033", 0); //Example of how to disable a specific message
 
-  myGNSS.setRTCMPortMessage("RTCM1074", "COM1", 1); //Enable message on a specific port
+  //myGNSS.setRTCMPortMessage("RTCM1074", "COM1", 1); //Example of how to enable a message on a specific port
 
   myGNSS.saveConfiguration(); //Save the current configuration into non-volatile memory (NVM)
 

@@ -57,6 +57,8 @@ void setup()
   //myGNSS.setModeRoverAutomotive();
 
   myGNSS.saveConfiguration(); //Save the current configuration into non-volatile memory (NVM)
+
+  Serial.println("Configuration complete");
 }
 
 void loop()

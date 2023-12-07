@@ -57,6 +57,8 @@ void setup()
   //myGNSS.enablePPS(100000, 1000, false, 0, 0); //widthMicroseconds, periodMilliseconds, positivePolarity, rfDelayNanoSeconds, userDelayNanoseconds
 
   myGNSS.saveConfiguration(); //Save the current configuration into non-volatile memory (NVM)
+
+  Serial.println("The PPS LED should now be blinking 100ms on, 900ms off");
 }
 
 void loop()

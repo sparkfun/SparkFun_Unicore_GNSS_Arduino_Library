@@ -54,6 +54,8 @@ void setup()
   myGNSS.setMinCNO(10); //Set the minimum CN0 value to 10 dBHz
 
   myGNSS.saveConfiguration(); //Save the current configuration into non-volatile memory (NVM)
+
+  Serial.println("Configuration complete");
 }
 
 void loop()

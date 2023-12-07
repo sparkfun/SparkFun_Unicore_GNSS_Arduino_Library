@@ -9,7 +9,7 @@
   These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
 
-  This example pipes all NMEA sentences to the UART.
+  This example pipes all NMEA sentences to the UART1 (the USB C port) and UART2 (connected to the microcontroller).
 
   Feel like supporting open source hardware?
   Buy a board from SparkFun!
@@ -65,7 +65,7 @@ void setup()
 
   //Configure a specific port
   float outputRate = 0.2; //0.2 = 5 reports per second.
-  char comName[] = "COM3"; //COM1, COM2, and COM3 are valid
+  char comName[] = "COM1"; //COM1, COM2, and COM3 are valid
   myGNSS.setNMEAPortMessage("GPGGA", comName, outputRate); //Message type, COM port, output rate.
   myGNSS.setNMEAPortMessage("GPGSA", comName, outputRate);
   myGNSS.setNMEAPortMessage("GPGST", comName, outputRate);

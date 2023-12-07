@@ -41,7 +41,7 @@ void setup()
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);
 
-  myGNSS.enableDebugging(); // Print all debug to Serial
+  //myGNSS.enableDebugging(); // Print all debug to Serial
 
   if (myGNSS.begin(SerialGNSS) == false) //Give the serial port over to the library
   {
