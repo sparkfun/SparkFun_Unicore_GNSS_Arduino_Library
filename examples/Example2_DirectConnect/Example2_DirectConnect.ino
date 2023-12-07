@@ -1,12 +1,16 @@
 /*
-  Get the current configuration, version, mode, and mask from UM980
+  Echo all characters to the serial terminal.
   By: Nathan Seidle
   SparkFun Electronics
   Date: October 2nd, 2023
   License: MIT. Please see LICENSE.md for more information.
 
-  This example shows how to send the 'CONFIG' command to get a clear text response that the user
-  can parse to see which settings are set.
+  This sketch simply echoes chars coming from the UM980 and sends chars
+  to the UM980. This allows a user to directly enter command strings into the UM980
+  while still connected to the Arduino. Good for viewing raw output from a given command.
+
+  For example, type CONFIG to see the module's current configuration response.
+  
   These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
 
@@ -36,12 +40,12 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("UM980 comm over ESP UART1");
+  Serial.println("SparkFun UM980 Example");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);
 
-  myGNSS.enableDebugging(); // Print all debug to Serial
+  //myGNSS.enableDebugging(); // Print all debug to Serial
 
   if (myGNSS.begin(SerialGNSS) == false) //Give the serial port over to the library
   {
@@ -50,35 +54,20 @@ void setup()
   }
   Serial.println("UM980 detected!");
 
+  bool response = true;
+
   //Turn off all NMEA, RTCM, and any other message that may be reporting periodically
-  myGNSS.disableOutput();
+  response &= myGNSS.disableOutput();
 
-  char response[1000] = {0};
-  int responseLength = sizeof(response);
-
-  Serial.println();
-  responseLength = sizeof(response);
-  myGNSS.sendQuery("MASK", response, &responseLength);
-  Serial.printf("Mask response (%d bytes): \r\n%s\r\n", responseLength, response);
-
-  //The config query can be more than 700 bytes
-  Serial.println();
-  responseLength = sizeof(response);
-  myGNSS.sendQuery("CONFIG", response, &responseLength);
-  Serial.printf("Config response (%d bytes): \r\n%s\r\n", responseLength, response);
-
-  Serial.println();
-  responseLength = sizeof(response);
-  myGNSS.sendQuery("MODE", response, &responseLength);
-  Serial.printf("Mode response (%d bytes): \r\n%s\r\n", responseLength, response);
-
-  Serial.println();
-  responseLength = sizeof(response);
-  myGNSS.sendQuery("VERSION", response, &responseLength);
-  Serial.printf("Version response (%d bytes): \r\n%s\r\n", responseLength, response);
+  Serial.println("All characters now being echoed to UM980");
+  Serial.println("Be sure both NL & CR is turned on!");
 }
 
 void loop()
 {
-  if (Serial.available()) ESP.restart();
+  while(SerialGNSS.available())
+    Serial.write(SerialGNSS.read());
+
+  while(Serial.available())
+    SerialGNSS.write(Serial.read());
 }

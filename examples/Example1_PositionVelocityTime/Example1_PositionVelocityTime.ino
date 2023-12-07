@@ -16,8 +16,8 @@
   SparkFun Triband GNSS RTK Breakout - UM980 (GPS-23286) https://www.sparkfun.com/products/23286
 
   Hardware Connections:
-  Connect RX2 of the UM980 to pin 4 on the ESP32
-  Connect TX2 of the UM980 to pin 13 on the ESP32
+  Connect RX2 (green wire) of the UM980 to pin 4 on the ESP32
+  Connect TX2 (orange wire) of the UM980 to pin 13 on the ESP32
   To make this easier, a 4-pin locking JST cable can be purchased here: https://www.sparkfun.com/products/17240
   Note: Almost any ESP32 pins can be used for serial.
   Connect a dual or triband GNSS antenna: https://www.sparkfun.com/products/21801
