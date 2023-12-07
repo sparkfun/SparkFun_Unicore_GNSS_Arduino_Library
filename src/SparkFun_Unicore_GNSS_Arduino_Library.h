@@ -76,6 +76,7 @@ const uint16_t offsetHeaderLeapSecond = 21;
 const uint16_t offsetHeaderOutputDelay = 22;
 
 // VERSIONB
+const uint16_t messageIdVersion = 37;
 const uint16_t offsetVersionModuleType = 0;
 const uint16_t offsetVersionFirmwareVersion = 4;
 const uint16_t offsetVersionAuth = 37;
@@ -139,10 +140,11 @@ class UM980
     unsigned long lastUpdateGeodetic = 0;
     unsigned long lastUpdateEcef = 0;
     unsigned long lastUpdateDateTime = 0;
+    unsigned long lastUpdateVersion = 0;
 
     bool staleDateTime();
     bool staleEcef();
-    void stopAutoReports(); //Delete all pointers to force reinit next time a helper function is called
+    void stopAutoReports(); // Delete all pointers to force reinit next time a helper function is called
 
     Um980Result getGeodetic(uint16_t maxWaitMs = 1500);
     Um980Result updateEcef(uint16_t maxWaitMs = 1500);
@@ -266,6 +268,13 @@ class UM980
 
     uint32_t getFixAgeMilliseconds(); // Based on Geodetic report
 
+    uint8_t getModelType();
+    char *getVersion();
+    char *getID();
+    char *getCompileTime();
+
+    char *getVersionFull(uint16_t maxWaitMs = 1500);
+
     void unicoreHandler(uint8_t *data, uint16_t length);
 
     bool initBestnav(uint8_t rate = 1);
@@ -276,6 +285,9 @@ class UM980
 
     bool initRectime(uint8_t rate = 1);
     UNICORE_RECTIME_t *packetRECTIME = nullptr;
+
+    bool initVersion();
+    UNICORE_VERSION_t *packetVERSION = nullptr;
 };
 
 #endif //_SPARKFUN_UNICORE_GNSS_ARDUINO_LIBRARY_H

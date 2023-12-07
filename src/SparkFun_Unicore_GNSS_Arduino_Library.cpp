@@ -67,6 +67,7 @@
       FReset
       Reset
       SaveConfig
+      Version
 
   Data Query Commands
 
@@ -185,6 +186,10 @@ bool UM980::updateOnce()
             break;
         case (UNICORE_PARSE_STATE_NMEA_TERMINATION):
             um980NmeaLineTermination(&unicoreParse, incoming);
+            break;
+
+        case (UNICORE_PARSE_STATE_UNICORE_CRC):
+            um980UnicoreCRC(&unicoreParse, incoming);
             break;
 
         case (UNICORE_PARSE_STATE_UNICORE_SYNC2):
@@ -519,7 +524,7 @@ bool UM980::disableOutput()
 // Disable all messages on a given port
 bool UM980::disableOutputPort(const char *comName)
 {
-    //We don't know if this is the COM port we are communicating on, so err on the side of caution.
+    // We don't know if this is the COM port we are communicating on, so err on the side of caution.
     stopAutoReports(); // Remove pointers so we will re-init next check
 
     char command[50];
@@ -691,8 +696,6 @@ Um980Result UM980::sendQuery(const char *command, uint16_t maxWaitMs)
         delay(1);
     }
 
-    // debugPrintf("Found OK to command");
-
     return (UM980_RESULT_OK);
 }
 
@@ -706,8 +709,8 @@ Um980Result UM980::sendString(const char *command, uint16_t maxWaitMs)
 {
     clearBuffer();
 
-    unicoreParse.length = 0; // Reset parser
-    strncpy(commandName, command, sizeof(commandName));
+    unicoreParse.length = 0;                                 // Reset parser
+    strncpy(commandName, command, sizeof(commandName));      // Copy to class so that parsers can see it
     commandResponse = UM980_RESULT_RESPONSE_COMMAND_WAITING; // Reset
 
     serialPrintln(command);
@@ -808,6 +811,14 @@ Um980Result UM980::checkCRC(char *response)
             return;                                                                                                    \
     }
 
+#define CHECK_POINTER_CHAR(packetPointer, initPointer)                                                                 \
+    {                                                                                                                  \
+        if (packetPointer == nullptr)                                                                                  \
+            initPointer();                                                                                             \
+        if (packetPointer == nullptr)                                                                                  \
+            return ((char *)"Error");                                                                                  \
+    }
+
 // Cracks a given binary message into the applicable container
 void UM980::unicoreHandler(uint8_t *response, uint16_t length)
 {
@@ -896,6 +907,69 @@ void UM980::unicoreHandler(uint8_t *response, uint16_t length)
         memcpy(&packetBESTNAVXYZ->data.ecefYDeviation, &data[offsetBestnavXyzPYDeviation], sizeof(float));
         memcpy(&packetBESTNAVXYZ->data.ecefZDeviation, &data[offsetBestnavXyzPZDeviation], sizeof(float));
     }
+    else if (messageID == messageIdVersion)
+    {
+        // debugPrintf("Version Handler");
+        CHECK_POINTER_VOID(packetVERSION, initVersion); // Check that RAM has been allocated
+
+        lastUpdateVersion = millis(); // Update stale marker
+
+        uint8_t *data = &response[um980HeaderLength]; // Point at the start of the data fields
+
+        // Move data into given containers
+        memcpy(&packetVERSION->data.modelType, &data[offsetVersionModuleType], sizeof(packetVERSION->data.modelType));
+        memcpy(&packetVERSION->data.swVersion, &data[offsetVersionFirmwareVersion],
+               sizeof(packetVERSION->data.swVersion));
+        memcpy(&packetVERSION->data.efuseID, &data[offsetVersionEfuseID], sizeof(packetVERSION->data.efuseID));
+        memcpy(&packetVERSION->data.compileTime, &data[offsetVersionCompTime], sizeof(packetVERSION->data.compileTime));
+    }
+    else
+    {
+        debugPrintf("Unknown message id: %d\r\n", messageID);
+    }
+}
+
+// Allocate RAM for packetVERSION and initialize it
+bool UM980::initVersion()
+{
+    packetVERSION = new UNICORE_VERSION_t; // Allocate RAM for the main struct
+    if (packetVERSION == nullptr)
+    {
+        debugPrintf("Pointer alloc fail");
+        return (false);
+    }
+    //   packetVERSION->callbackPointerPtr = nullptr;
+    //   packetVERSION->callbackData = nullptr;
+
+    // Send command for single query
+    if (sendCommand("VERSIONB") == false)
+    {
+        delete packetVERSION;
+        packetVERSION = nullptr; // Remove pointer so we will re-init next check
+        return (false);
+    }
+
+    debugPrintf("VERSION started");
+
+    // Wait until response is received
+    lastUpdateVersion = 0;
+    uint16_t maxWait = 1000; // Wait for one response to come in
+    unsigned long startTime = millis();
+    while (1)
+    {
+        update(); // Call parser
+        if (lastUpdateVersion > 0)
+            break;
+        if (millis() - startTime > maxWait)
+        {
+            debugPrintf("GNSS: Failed to get response from VERSION start");
+            delete packetVERSION;
+            packetVERSION = nullptr;
+            return (false);
+        }
+    }
+
+    return (true);
 }
 
 // Allocate RAM for packetBESTNAV and initialize it
@@ -1240,4 +1314,62 @@ double UM980::getTimeOffsetDeviation()
 {
     CHECK_POINTER_BOOL(packetRECTIME, initRectime); // Check that RAM has been allocated
     return (packetRECTIME->data.timeDeviation);
+}
+
+uint8_t UM980::getModelType()
+{
+    CHECK_POINTER_BOOL(packetVERSION, initVersion); // Check that RAM has been allocated
+    return (packetVERSION->data.modelType);
+}
+char *UM980::getVersion()
+{
+    CHECK_POINTER_CHAR(packetVERSION, initVersion); // Check that RAM has been allocated
+    return (packetVERSION->data.swVersion);
+}
+char *UM980::getID()
+{
+    CHECK_POINTER_CHAR(packetVERSION, initVersion); // Check that RAM has been allocated
+    return (packetVERSION->data.efuseID);
+}
+char *UM980::getCompileTime()
+{
+    CHECK_POINTER_CHAR(packetVERSION, initVersion); // Check that RAM has been allocated
+    return (packetVERSION->data.compileTime);
+}
+
+// Returns pointer to terminated response.
+//$command,VERSION,response: OK*04
+// #VERSION,92,GPS,FINE,2289,167126600,0,0,18,155;UM980,R4.10Build7923,HRPT00-S10C-P,2310415000001-MD22B1224961040,ff3bd496fd7ca68b,2022/09/28*45d62771
+char *UM980::getVersionFull(uint16_t maxWaitMs)
+{
+    if (sendString("VERSION") == UM980_RESULT_OK)
+    {
+        unicoreParse.length = 0; // Reset parser
+        strncpy(commandName, "VERSION", sizeof(commandName));
+        commandResponse = UM980_RESULT_OK; // Tell parser to keep the data in the buffer
+
+        // Feed the parser until we see the actual response to the query
+        int wait = 0;
+        while (1)
+        {
+            if (wait++ == maxWaitMs)
+                return ((char *)"Timeout");
+
+            updateOnce(); // Will call um980EomHandler()
+
+            if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_OK)
+            {
+                // Response sitting in buffer. Return pointer to buffer.
+                unicoreParse.buffer[unicoreParse.length] = '\0'; // Terminate string
+                return ((char *)unicoreParse.buffer);
+            }
+
+            if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_ERROR)
+                return ((char *)"Error1");
+
+            delay(1);
+        }
+    }
+
+    return ((char *)"Error2");
 }
