@@ -29,6 +29,7 @@ enum
     UNICORE_PARSE_STATE_UNICORE_SYNC3,
     UNICORE_PARSE_STATE_UNICORE_READ_LENGTH,
     UNICORE_PARSE_STATE_UNICORE_READ_DATA,
+    UNICORE_PARSE_STATE_UNICORE_CRC,
     UNICORE_PARSE_STATE_RTCM_LENGTH1,
     UNICORE_PARSE_STATE_RTCM_LENGTH2,
     UNICORE_PARSE_STATE_RTCM_MESSAGE1,
@@ -61,6 +62,7 @@ void um980NmeaFindAsterisk(UNICORE_PARSE_STATE *parse, uint8_t data);
 void um980NmeaChecksumByte1(UNICORE_PARSE_STATE *parse, uint8_t data);
 void um980NmeaChecksumByte2(UNICORE_PARSE_STATE *parse, uint8_t data);
 void um980NmeaLineTermination(UNICORE_PARSE_STATE *parse, uint8_t data);
+void um980UnicoreCRC(UNICORE_PARSE_STATE *parse, uint8_t data);
 int um980AsciiToNibble(int data);
 
 void um980UnicoreBinarySync2(UNICORE_PARSE_STATE *parse, uint8_t data);

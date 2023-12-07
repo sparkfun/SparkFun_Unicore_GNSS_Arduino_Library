@@ -4,9 +4,10 @@
 extern UM980 *ptrUM980; // Global pointer for external parser access into library class
 
 // End of message handler
-// If it's a response to a command, is it OK or BAD? $command,badResponse,response:
-// PARSING FAILD NO MATCHING FUNC BADRESPONSE*40
-// If it's Unicore binary, load into target variables If it's NMEA or RTCM, discard
+// If it's a response to a command, is it OK or BAD? 
+// Ex: $command,badResponse,response: PARSING FAILD NO MATCHING FUNC BADRESPONSE*40
+// If it's Unicore binary, load into target variables 
+// If it's NMEA or RTCM, discard
 void um980EomHandler(UNICORE_PARSE_STATE *parse)
 {
     // Switch on message type (NMEA, RTCM, Unicore Binary, etc)
@@ -157,7 +158,29 @@ void um980NmeaFindAsterisk(UNICORE_PARSE_STATE *parse, uint8_t data)
     if (data != '*')
         parse->check ^= data;
     else
-        parse->state = UNICORE_PARSE_STATE_NMEA_CHECKSUM1; // Move to next state
+    {
+        // Determine if we need to capture 2 bytes (checksum) or 8 bytes (CRC)
+        char *responseType = strcasestr((char *)parse->nmeaMessageName, "VERSION");
+        if (responseType != nullptr) // Found
+        {
+            parse->state = UNICORE_PARSE_STATE_UNICORE_CRC; // VERSION uses 8 byte CRC
+            parse->bytesRemaining = 8;
+        }
+        else
+            parse->state = UNICORE_PARSE_STATE_NMEA_CHECKSUM1; // NMEA and MODE use 2 bytes
+    }
+}
+
+// Read the first checksum byte
+void um980UnicoreCRC(UNICORE_PARSE_STATE *parse, uint8_t data)
+{
+    parse->bytesRemaining -= 1; // Account for a byte received
+
+    if (parse->bytesRemaining == 0)
+    {
+        parse->bytesRemaining = 2;
+        parse->state = UNICORE_PARSE_STATE_NMEA_TERMINATION; // Move to next state
+    }
 }
 
 // Read the first checksum byte
@@ -170,7 +193,9 @@ void um980NmeaChecksumByte1(UNICORE_PARSE_STATE *parse, uint8_t data)
 void um980NmeaChecksumByte2(UNICORE_PARSE_STATE *parse, uint8_t data)
 {
     parse->nmeaLength = parse->length;
+
     parse->bytesRemaining = 2;
+
     parse->state = UNICORE_PARSE_STATE_NMEA_TERMINATION; // Move to next state
 }
 
@@ -208,6 +233,11 @@ void um980NmeaLineTermination(UNICORE_PARSE_STATE *parse, uint8_t data)
 
         // #VERSION,97,GPS,FINE,2282,248561000,0,0,18,676;UM980,R4.10Build7923,HRPT00-S10C-P,2310415000001-MD22B1224962616,ff3bac96f31f9bdd,2022/09/28*7432d4ed
         // For VERSION, the data will be prefixed with a #, uses a 32-bit CRC
+
+        // Serial.println("Buffer:");
+        // for (int x = 0; x < parse->length; x++)
+        //     Serial.printf("%c", parse->buffer[x]);
+        // Serial.println();
 
         // Handle CRC for command response with a leading #
         if (parse->buffer[0] == '#')
@@ -264,6 +294,13 @@ void um980NmeaLineTermination(UNICORE_PARSE_STATE *parse, uint8_t data)
                 parse->length = 0;
                 parse->state = UNICORE_PARSE_STATE_WAITING_FOR_PREAMBLE; // Move to next state
                 return;
+            }
+
+            // Return immediately if we want the full buffer
+            if (ptrUM980->commandResponse == UM980_RESULT_OK)
+            {
+                um980EomHandler(parse);
+                return; //Do not erase the buffer length
             }
 
             // Otherwise, continue parsing after handler
@@ -408,8 +445,8 @@ void um980UnicoreReadData(UNICORE_PARSE_STATE *parse, uint8_t data)
     }
     else
     {
-        ptrUM980->debugPrintf("Unicore CRC failed. Sentence CRC: 0x%02X Calculated CRC: 0x%02X\r\n", sentenceCRC,
-                              calculatedCRC);
+        ptrUM980->debugPrintf("Unicore CRC failed length: %d Sentence CRC: 0x%02X Calculated CRC: 0x%02X\r\n",
+                              parse->length, sentenceCRC, calculatedCRC);
     }
 
     // Search for another preamble byte
