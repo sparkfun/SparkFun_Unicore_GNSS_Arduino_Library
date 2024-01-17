@@ -104,6 +104,11 @@ getDateStatus	KEYWORD2
 getTimeOffset	KEYWORD2
 getTimeOffsetDeviation	KEYWORD2
 getFixAgeMilliseconds	KEYWORD2
+getModuleType	KEYWORD2
+getID	KEYWORD2
+getVersion	KEYWORD2
+getCompileTime	KEYWORD2
+getVersionFull	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
