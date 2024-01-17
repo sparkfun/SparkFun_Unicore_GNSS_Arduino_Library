@@ -5,8 +5,7 @@
   Date: October 2nd, 2023
   License: MIT. Please see LICENSE.md for more information.
 
-  This example shows how to send the 'CONFIG' command to get a clear text response that the user
-  can parse to see which settings are set.
+  This example shows how to query a device for its version and unique ID.
   These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
 
