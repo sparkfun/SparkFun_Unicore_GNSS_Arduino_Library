@@ -316,7 +316,7 @@ bool UM980::setModeRoverMow()
 bool UM980::setPortBaudrate(const char *comName, unsigned long newBaud)
 {
     char command[50];
-    snprintf(command, sizeof(command), "CONFIG %s %d", comName, newBaud);
+    snprintf(command, sizeof(command), "CONFIG %s %ld", comName, newBaud);
 
     return (sendCommand(command));
 }
@@ -326,7 +326,7 @@ bool UM980::setPortBaudrate(const char *comName, unsigned long newBaud)
 bool UM980::setBaudrate(unsigned long newBaud)
 {
     char command[50];
-    snprintf(command, sizeof(command), "CONFIG %d", newBaud);
+    snprintf(command, sizeof(command), "CONFIG %ld", newBaud);
 
     return (sendCommand(command));
 }
