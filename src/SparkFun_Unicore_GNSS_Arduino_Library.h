@@ -55,81 +55,81 @@ typedef enum
     UM980_RESULT_RESPONSE_COMMAND_WAITING,
 } Um980Result;
 
-const uint8_t um980BinarySyncA = 0xAA;
-const uint8_t um980BinarySyncB = 0x44;
-const uint8_t um980BinarySyncC = 0xB5;
-const uint8_t um980ASCIISyncEnd = '\n';
-const uint16_t um980HeaderLength = 24;
+#define um980BinarySyncA    ((uint8_t)0xAA)
+#define um980BinarySyncB    ((uint8_t)0x44)
+#define um980BinarySyncC    ((uint8_t)0xB5)
+#define um980ASCIISyncEnd   ((uint8_t)'\n')
 
-const uint16_t offsetHeaderSyncA = 0;
-const uint16_t offsetHeaderSyncB = 1;
-const uint16_t offsetHeaderSyncC = 2;
-const uint16_t offsetHeaderCpuIdle = 3;
-const uint16_t offsetHeaderMessageId = 4;
-const uint16_t offsetHeaderMessageLength = 6;
-const uint16_t offsetHeaderReferenceTime = 8;
-const uint16_t offsetHeaderTimeStatus = 9;
-const uint16_t offsetHeaderWeekNumber = 10;
-const uint16_t offsetHeaderSecondsOfWeek = 12;
-const uint16_t offsetHeaderReleaseVersion = 20;
-const uint16_t offsetHeaderLeapSecond = 21;
-const uint16_t offsetHeaderOutputDelay = 22;
+#define um980HeaderLength           ((uint16_t)24)
+#define offsetHeaderSyncA           ((uint16_t)0)
+#define offsetHeaderSyncB           ((uint16_t)1)
+#define offsetHeaderSyncC           ((uint16_t)2)
+#define offsetHeaderCpuIdle         ((uint16_t)3)
+#define offsetHeaderMessageId       ((uint16_t)4)
+#define offsetHeaderMessageLength   ((uint16_t)6)
+#define offsetHeaderReferenceTime   ((uint16_t)8)
+#define offsetHeaderTimeStatus      ((uint16_t)9)
+#define offsetHeaderWeekNumber      ((uint16_t)10)
+#define offsetHeaderSecondsOfWeek   ((uint16_t)12)
+#define offsetHeaderReleaseVersion  ((uint16_t)20)
+#define offsetHeaderLeapSecond      ((uint16_t)21)
+#define offsetHeaderOutputDelay     ((uint16_t)22)
 
 // VERSIONB
-const uint16_t messageIdVersion = 37;
-const uint16_t offsetVersionModuleType = 0;
-const uint16_t offsetVersionFirmwareVersion = 4;
-const uint16_t offsetVersionAuth = 37;
-const uint16_t offsetVersionPsn = 166;
-const uint16_t offsetVersionEfuseID = 232;
-const uint16_t offsetVersionCompTime = 265;
+#define messageIdVersion             ((uint16_t)37)
+#define offsetVersionModuleType      ((uint16_t)0)
+#define offsetVersionFirmwareVersion ((uint16_t)4)
+#define offsetVersionAuth            ((uint16_t)37)
+#define offsetVersionPsn             ((uint16_t)166)
+#define offsetVersionEfuseID         ((uint16_t)232)
+#define offsetVersionCompTime        ((uint16_t)265)
 
 // BESTNAVB contains HPA, sats tracked/used, lat/long, RTK status, fix status
-const uint16_t messageIdBestnav = 2118;
-const uint16_t offsetBestnavPsolStatus = 0;
-const uint16_t offsetBestnavPosType = 4;
-const uint16_t offsetBestnavLat = 8;
-const uint16_t offsetBestnavLon = 16;
-const uint16_t offsetBestnavHgt = 24;
-const uint16_t offsetBestnavLatDeviation = 40;
-const uint16_t offsetBestnavLonDeviation = 44;
-const uint16_t offsetBestnavHgtDeviation = 48;
-const uint16_t offsetBestnavSatsTracked = 64;
-const uint16_t offsetBestnavSatsUsed = 65;
-const uint16_t offsetBestnavExtSolStat = 69;
-const uint16_t offsetBestnavVelType = 76;
-const uint16_t offsetBestnavHorSpd = 88;
-const uint16_t offsetBestnavTrkGnd = 96;
-const uint16_t offsetBestnavVertSpd = 104;
-const uint16_t offsetBestnavVerspdStd = 112;
-const uint16_t offsetBestnavHorspdStd = 116;
+#define messageIdBestnav            ((uint16_t)2118)
+#define offsetBestnavPsolStatus     ((uint16_t)0)
+#define offsetBestnavPosType        ((uint16_t)4)
+#define offsetBestnavLat            ((uint16_t)8)
+#define offsetBestnavLon            ((uint16_t)16)
+#define offsetBestnavHgt            ((uint16_t)24)
+#define offsetBestnavLatDeviation   ((uint16_t)40)
+#define offsetBestnavLonDeviation   ((uint16_t)44)
+#define offsetBestnavHgtDeviation   ((uint16_t)48)
+#define offsetBestnavSatsTracked    ((uint16_t)64)
+#define offsetBestnavSatsUsed       ((uint16_t)65)
+#define offsetBestnavExtSolStat     ((uint16_t)69)
+#define offsetBestnavVelType        ((uint16_t)76)
+#define offsetBestnavHorSpd         ((uint16_t)88)
+#define offsetBestnavTrkGnd         ((uint16_t)96)
+#define offsetBestnavVertSpd        ((uint16_t)104)
+#define offsetBestnavVerspdStd      ((uint16_t)112)
+#define offsetBestnavHorspdStd      ((uint16_t)116)
 
 // BESTNAVXYZB
-const uint16_t messageIdBestnavXyz = 240;
-const uint16_t offsetBestnavXyzPsolStatus = 0;
-const uint16_t offsetBestnavXyzPosType = 4;
-const uint16_t offsetBestnavXyzPX = 8;
-const uint16_t offsetBestnavXyzPY = 16;
-const uint16_t offsetBestnavXyzPZ = 24;
-const uint16_t offsetBestnavXyzPXDeviation = 32;
-const uint16_t offsetBestnavXyzPYDeviation = 36;
-const uint16_t offsetBestnavXyzPZDeviation = 40;
-const uint16_t offsetBestnavXyzSatsTracked = 104;
-const uint16_t offsetBestnavXyzSatsUsed = 105;
-const uint16_t offsetBestnavXyzExtSolStat = 109;
+#define messageIdBestnavXyz         ((uint16_t)240)
+#define offsetBestnavXyzPsolStatus  ((uint16_t)0)
+#define offsetBestnavXyzPosType     ((uint16_t)4)
+#define offsetBestnavXyzPX          ((uint16_t)8)
+#define offsetBestnavXyzPY          ((uint16_t)16)
+#define offsetBestnavXyzPZ          ((uint16_t)24)
+#define offsetBestnavXyzPXDeviation ((uint16_t)32)
+#define offsetBestnavXyzPYDeviation ((uint16_t)36)
+#define offsetBestnavXyzPZDeviation ((uint16_t)40)
+#define offsetBestnavXyzSatsTracked ((uint16_t)104)
+#define offsetBestnavXyzSatsUsed    ((uint16_t)105)
+#define offsetBestnavXyzExtSolStat  ((uint16_t)109)
 
 // RECTIMEB for time/date
-const uint16_t messageIdRectime = 102;
-const uint16_t offsetRectimeClockStatus = 0;
-const uint16_t offsetRectimeOffset = 4;
-const uint16_t offsetRectimeOffsetStd = 12;
-const uint16_t offsetRectimeUtcYear = 28;
-const uint16_t offsetRectimeUtcMonth = 32;
-const uint16_t offsetRectimeUtcDay = 33;
-const uint16_t offsetRectimeUtcHour = 34;
-const uint16_t offsetRectimeUtcMinute = 35;
-const uint16_t offsetRectimeUtcMillisecond = 36;
-const uint16_t offsetRectimeUtcStatus = 40;
+#define messageIdRectime            ((uint16_t)102)
+#define offsetRectimeClockStatus    ((uint16_t)0)
+#define offsetRectimeOffset         ((uint16_t)4)
+#define offsetRectimeOffsetStd      ((uint16_t)12)
+#define offsetRectimeUtcYear        ((uint16_t)28)
+#define offsetRectimeUtcMonth       ((uint16_t)32)
+#define offsetRectimeUtcDay         ((uint16_t)33)
+#define offsetRectimeUtcHour        ((uint16_t)34)
+#define offsetRectimeUtcMinute      ((uint16_t)35)
+#define offsetRectimeUtcMillisecond ((uint16_t)36)
+#define offsetRectimeUtcStatus      ((uint16_t)40)
 
 // HWSTATUS has temperature info, and voltage info
 
