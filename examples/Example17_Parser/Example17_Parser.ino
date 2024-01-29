@@ -22,18 +22,18 @@ int pin_UART1_RX = 13;
 SEMP_PARSE_ROUTINE const parserTable[] =
 {
     sempNmeaPreamble,
-    sempNmeaHashPreamble,
+    sempUnicoreHashPreamble,
     sempRtcmPreamble,
-    sempUnicorePreamble,
+    sempUnicoreBinaryPreamble,
 };
 const int parserCount = sizeof(parserTable) / sizeof(parserTable[0]);
 
 const char * const parserNames[] =
 {
-    "NMEA_$",
-    "NMEA_#",
-    "RTCM",
-    "Unicore",
+    "NMEA Parser",
+    "Unicore Hash (#) Parser",
+    "RTCM Parser",
+    "Unicore Binary Parser",
 };
 const int parserNameCount = sizeof(parserNames) / sizeof(parserNames[0]);
 
@@ -77,6 +77,10 @@ void setup()
         Serial.println("UM980 failed to respond. Check ports and baud rates. Freezing...");
         while (true);
     }
+//    myGNSS.enablePrintBadChecksums();
+//    myGNSS.enablePrintRxMessages();
+//    myGNSS.enableRxMessageDump();
+
     Serial.println("UM980 detected!");
 
     // Clear saved configurations, satellite ephemerides, position information, and reset baud rate to 115200bps.
@@ -125,17 +129,16 @@ void setup()
     if (!parse)
         reportFatalError("Failed to initialize the parser");
 
-    // Enable debugging for the parser
-    sempEnableDebugOutput(parse);
-
     if (COMPILE_CAPTURE_RAW_DATA_STREAM)
     {
         // Disable parser output
-        sempDisableDebugOutput(parse);
         sempDisableErrorOutput(parse);
         Serial.println("const uint8_t rawDataStream[] =");
         Serial.println("{");
     }
+    else
+        // Enable debugging for the parser
+        sempEnableDebugOutput(parse);
 
     Serial.println("Mixture of NMEA, RTCM, and UM980 binary now reporting. Have fun!");
 }
@@ -313,10 +316,16 @@ const char *getParseStateName(SEMP_PARSE_STATE *parse)
         name = sempNmeaGetStateName(parse);
         if (name)
             break;
+        name = sempNmeaGetStateName(parse);
+        if (name)
+            break;
         name = sempRtcmGetStateName(parse);
         if (name)
             break;
-        name = sempUnicoreGetStateName(parse);
+        name = sempUnicoreBinaryGetStateName(parse);
+        if (name)
+            break;
+        name = sempUnicoreHashGetStateName(parse);
         if (name)
             break;
         name = sempGetStateName(parse);

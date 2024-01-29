@@ -27,6 +27,7 @@
 
 #include "parser.h"
 #include "unicore_structs.h"
+#include <SparkFun_Extensible_Message_Parser.h> //http://librarymanager/All#SparkFun_Extensible_Message_Parser
 
 // Default maximum NMEA byte count
 // maxNMEAByteCount was set to 82: https://en.wikipedia.org/wiki/NMEA_0183#Message_structure
@@ -133,6 +134,8 @@ typedef enum
 
 // HWSTATUS has temperature info, and voltage info
 
+void um980ProcessMessage(SEMP_PARSE_STATE *parse, uint16_t type);
+
 class UM980
 {
   private:
@@ -152,11 +155,18 @@ class UM980
 
     Print *_debugPort = nullptr; // The stream to send debug messages to if enabled. Usually Serial.
 
+    SEMP_PARSE_STATE *_sempParse; // State of the SparkFun Extensible Message Parser
+
   protected:
     HardwareSerial *_hwSerialPort = nullptr;
 
   public:
-    bool begin(HardwareSerial &serialPort);
+    bool _printBadChecksum = false; // Display bad checksum message from the parser
+    bool _printParserTransitions = false; // Display the parser transitions
+    bool _printRxMessages = false; // Display the received message summary
+    bool _dumpRxMessages = false; // Display the received message hex dump
+
+    bool begin(HardwareSerial &serialPort, Print *parserDebug = nullptr, Print *parserError = &Serial);
     bool isConnected();
     bool update();
     bool updateOnce();
@@ -164,6 +174,22 @@ class UM980
     void debugPrintf(const char *format, ...);
     void enableDebugging(Print &debugPort = Serial);
     void disableDebugging();
+
+    void enableParserDebug(Print *print = &Serial);
+    void disableParserDebug();
+    void enableParserErrors(Print *print = &Serial);
+    void disableParserErrors();
+
+    void enablePrintBadChecksums();
+    void disablePrintBadChecksums();
+    void enablePrintParserTransitions();
+    void disablePrintParserTransitions();
+    void enablePrintRxMessages();
+    void disablePrintRxMessages();
+    void enableRxMessageDump();
+    void disableRxMessageDump();
+
+    void dumpBuffer(const uint8_t *buffer, uint16_t length);
 
     char commandName[20] = "";                 // Passes the command type into parser
     uint8_t commandResponse = UM980_RESULT_OK; // Gets EOM result from parser
