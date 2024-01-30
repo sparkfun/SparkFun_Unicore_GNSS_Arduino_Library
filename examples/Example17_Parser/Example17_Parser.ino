@@ -106,6 +106,9 @@ void setup()
         while (true);
     }
 
+    // Display the firmware version
+    Serial.printf("%s\r\n", myGNSS.getVersionFull());
+
     //sendCommand() sends the string directly and checks for the OK response
     //Returns true if the OK was detected
     //"BESTNAVB 1" starts the output of BESTNAV binary message at 1Hz on the COM port
