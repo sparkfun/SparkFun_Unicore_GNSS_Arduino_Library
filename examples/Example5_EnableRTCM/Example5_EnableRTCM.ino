@@ -21,15 +21,15 @@
   Connect a dual or triband GNSS antenna: https://www.sparkfun.com/products/21801
 */
 
-int pin_UART_TX = 4;
-int pin_UART_RX = 13;
-
 #include <SparkFun_Unicore_GNSS_Arduino_Library.h> //http://librarymanager/All#SparkFun_Unicore_GNSS
 #include <SparkFun_Extensible_Message_Parser.h> //http://librarymanager/All#SparkFun_Extensible_Message_Parser
 
 //----------------------------------------
 // Constants
 //----------------------------------------
+
+#define pin_UART_TX     4
+#define pin_UART_RX     13
 
 // Build the table listing all of the parsers
 SEMP_PARSE_ROUTINE const parserTable[] =
@@ -61,11 +61,12 @@ void setup()
   Serial.println("SparkFun UM980 Example");
 
   // Initialize the parser
-  parse = sempInitParser(parserTable, parserCount,
-                         parserNames, parserNameCount,
-                         0, 3000, processMessage, "RTCM_Test");
+  parse = sempBeginParser(parserTable, parserCount,
+                          parserNames, parserNameCount,
+                          0, 3000, processMessage, "RTCM_Test");
   if (!parse)
     reportFatalError("Failed to initialize the parser");
+  sempEnableDebugOutput(parse);
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART_RX, pin_UART_TX);
@@ -102,15 +103,9 @@ void loop()
     sempParseNextByte(parse, SerialGNSS.read());
 }
 
-// Output a line of text for the SparkFun Extensible Message Parser
-void sempExtPrintLineOfText(const char *string)
-{
-  Serial.println(string);
-}
-
 // Call back from within parser, for end of message
 // Process a complete message incoming from parser
-void processMessage(SEMP_PARSE_STATE *parse, uint8_t type)
+void processMessage(SEMP_PARSE_STATE *parse, uint16_t type)
 {
   SEMP_SCRATCH_PAD *scratchPad = (SEMP_SCRATCH_PAD *)parse->scratchPad;
   static bool displayOnce = true;
