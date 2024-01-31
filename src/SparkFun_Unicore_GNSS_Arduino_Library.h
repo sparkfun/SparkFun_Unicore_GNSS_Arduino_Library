@@ -25,16 +25,8 @@
 #include <SoftwareSerial.h>
 #endif
 
-#include "parser.h"
 #include "unicore_structs.h"
 #include <SparkFun_Extensible_Message_Parser.h> //http://librarymanager/All#SparkFun_Extensible_Message_Parser
-
-// Default maximum NMEA byte count
-// maxNMEAByteCount was set to 82: https://en.wikipedia.org/wiki/NMEA_0183#Message_structure
-// but this is often violated.
-// The user can adjust maxNMEAByteCount by calling setMaxNMEAByteCount
-// To be safe, use 100
-#define SFE_UM980_MAX_NMEA_BYTE_COUNT 100
 
 typedef enum
 {
@@ -188,6 +180,7 @@ class UM980
     void disablePrintRxMessages();
     void enableRxMessageDump();
     void disableRxMessageDump();
+    void printParserConfiguration(Print *print = &Serial);
 
     void dumpBuffer(const uint8_t *buffer, uint16_t length);
 
@@ -247,7 +240,6 @@ class UM980
     bool sendCommand(const char *command, uint16_t maxWaitMs = 1500);
     Um980Result sendQuery(const char *command, uint16_t maxWaitMs = 1500);
     Um980Result sendString(const char *command, uint16_t maxWaitMs = 1500);
-    Um980Result checkCRC(char *response);
 
     // Main helper functions
     double getLatitude(uint16_t maxWaitMs = 1500);
