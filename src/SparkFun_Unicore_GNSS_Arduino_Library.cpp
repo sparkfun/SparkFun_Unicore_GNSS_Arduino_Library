@@ -77,14 +77,94 @@
 #include "Arduino.h"
 #include "parser.h"
 
+//----------------------------------------
+// Constants
+//----------------------------------------
+
+// parserTable index values
+#define UM980_NMEA_PARSER_INDEX             0
+#define UM980_UNICORE_HASH_PARSER_INDEX     1
+#define UM980_RTCM_PARSER_INDEX             2
+#define UM980_UNICORE_BINARY_PARSER_INDEX   3
+
+// Build the table listing all of the parsers
+SEMP_PARSE_ROUTINE const parserTable[] =
+{
+    sempNmeaPreamble,
+    sempUnicoreHashPreamble,
+    sempRtcmPreamble,
+    sempUnicoreBinaryPreamble,
+};
+const int parserCount = sizeof(parserTable) / sizeof(parserTable[0]);
+
+const char * const parserNames[] =
+{
+    "UN980 NMEA Parser",
+    "UM980 Unicore Hash (#) Parser",
+    "UM980 RTCM Parser",
+    "UM980 Unicore Binary Parser",
+};
+const int parserNameCount = sizeof(parserNames) / sizeof(parserNames[0]);
+
+// Account for the largest message
+#define BUFFER_LENGTH   3000
+
+//----------------------------------------
+// Globals
+//----------------------------------------
+
 UM980 *ptrUM980 = nullptr; // Global pointer for external parser access into library class
 
 UNICORE_PARSE_STATE unicoreParse = {UNICORE_PARSE_STATE_WAITING_FOR_PREAMBLE};
 
-bool UM980::begin(HardwareSerial &serialPort)
+//----------------------------------------
+// Support routines
+//----------------------------------------
+
+// Alternate checksum for NMEA parser needed during setup
+bool badNmeaChecksum(SEMP_PARSE_STATE *parse)
+{
+    int alternateChecksum;
+    int checksum;
+
+    // Not a NMEA parser, no correction is possible
+    if (parse->type >= 2)
+        return false;
+
+    // Display bad checksums
+    if (ptrUM980->_printBadChecksum)
+    {
+        ptrUM980->debugPrintf("Bad checksum received, included %c in checksum", parse->buffer[0]);
+        ptrUM980->dumpBuffer(parse->buffer, parse->length);
+    }
+
+    // Older UM980 firmware during setup is improperly adding the '$'
+    // into the checksum calculation.  Convert the received checksum
+    // characters into binary.
+    checksum = sempAsciiToNibble(parse->buffer[parse->length - 3]);
+    checksum |= sempAsciiToNibble(parse->buffer[parse->length - 4]) << 4;
+
+    // Determine if the checksum also includes the '$'
+    alternateChecksum = parse->crc ^ '$';
+    return (checksum != alternateChecksum);
+}
+
+bool UM980::begin(HardwareSerial &serialPort, Print *parserDebug, Print *parserError)
 {
     ptrUM980 = this;
     _hwSerialPort = &serialPort;
+
+    // Initialize the parser
+    _sempParse = sempBeginParser(parserTable, parserCount,
+                                 parserNames, parserNameCount,
+                                 0, BUFFER_LENGTH, um980ProcessMessage,
+                                 "Unicore_Library", parserError,
+                                 parserDebug, badNmeaChecksum);
+    if (!_sempParse)
+    {
+        debugPrintf("UM980: Failed to initialize the parser!");
+        return false;
+    }
 
     // We assume the user has started the serial port with proper pins and baud rate prior to calling begin()
 
@@ -140,6 +220,48 @@ void UM980::disableDebugging()
     _debugPort = nullptr;
 }
 
+// Enable or disable the display of bad checksum messages from the parser
+void UM980::enablePrintBadChecksums()
+{
+    _printBadChecksum = true;
+}
+
+void UM980::disablePrintBadChecksums()
+{
+    _printBadChecksum = false;
+}
+
+// Enable or disable the display of parser transitions
+void UM980::enablePrintParserTransitions()
+{
+    _printParserTransitions = true;
+}
+
+void UM980::disablePrintParserTransitions()
+{
+    _printParserTransitions = false;
+}
+
+void UM980::enablePrintRxMessages()
+{
+    _printRxMessages = true;
+}
+
+void UM980::disablePrintRxMessages()
+{
+    _printRxMessages = false;
+}
+
+void UM980::enableRxMessageDump()
+{
+    _dumpRxMessages = true;
+}
+
+void UM980::disableRxMessageDump()
+{
+    _dumpRxMessages = false;
+}
+
 // Check for new data until there is no more
 bool UM980::update()
 {
@@ -149,13 +271,62 @@ bool UM980::update()
     return (newData);
 }
 
+// Translate the state value into an ASCII state name
+const char * um980GetStateName(SEMP_PARSE_STATE *parse)
+{
+    const char *name;
+
+    do
+    {
+        name = sempNmeaGetStateName(parse);
+        if (name)
+            break;
+        name = sempRtcmGetStateName(parse);
+        if (name)
+            break;
+        name = sempUnicoreBinaryGetStateName(parse);
+        if (name)
+            break;
+        name = sempUnicoreHashGetStateName(parse);
+        if (name)
+            break;
+        name = sempGetStateName(parse);
+    } while (0);
+    return name;
+}
+
 // Checks for new data once
 // Used during sendString and sendQuery
 bool UM980::updateOnce()
 {
+    const char *endName;
+    const char *startName;
+    SEMP_PARSE_ROUTINE startState;
+
     if (serialAvailable())
     {
         uint8_t incoming = serialRead();
+
+        // Get the current state and state name
+        if (_printParserTransitions)
+        {
+            startState = _sempParse->state;
+            startName = um980GetStateName(_sempParse);
+        }
+
+        // Update the parser state based on the incoming byte
+        sempParseNextByte(_sempParse, incoming);
+
+        // Get the current state name
+        if (_printParserTransitions)
+        {
+            endName = um980GetStateName(_sempParse);
+
+            // Display the parser state transition
+            debugPrintf("UM980: 0x%02x (%c), state: (%p) %s --> %s (%p)",
+                        incoming, ((incoming >= ' ') && (incoming < 0x7f)) ? incoming : '.',
+                        startState, startName, endName, _sempParse->state);
+        }
 
         // Move byte into parser
         unicoreParse.buffer[unicoreParse.length++] = incoming;
@@ -227,6 +398,119 @@ bool UM980::updateOnce()
         return (true);
     }
     return (false);
+}
+
+// Disable debug output from the parser
+void UM980::disableParserDebug()
+{
+    sempDisableDebugOutput(_sempParse);
+}
+
+// Enable debug output from the parser
+void UM980::enableParserDebug(Print *print)
+{
+    sempEnableDebugOutput(_sempParse, print);
+}
+
+// Disable debug output from the parser
+void UM980::disableParserErrors()
+{
+    sempDisableDebugOutput(_sempParse);
+}
+
+// Enable debug output from the parser
+void UM980::enableParserErrors(Print *print)
+{
+    sempEnableErrorOutput(_sempParse, print);
+}
+
+// Display the contents of a buffer
+void UM980::dumpBuffer(const uint8_t *buffer, uint16_t length)
+{
+    int bytes;
+    const uint8_t *end;
+    int index;
+    char line[128];
+    uint16_t offset;
+
+    end = &buffer[length];
+    offset = 0;
+    while (buffer < end)
+    {
+        // Determine the number of bytes to display on the line
+        bytes = end - buffer;
+        if (bytes > (16 - (offset & 0xf)))
+            bytes = 16 - (offset & 0xf);
+
+        // Display the offset
+        sprintf(line, "0x%08lx: ", offset);
+
+        // Skip leading bytes
+        for (index = 0; index < (offset & 0xf); index++)
+            sprintf(&line[strlen(line)], "   ");
+
+        // Display the data bytes
+        for (index = 0; index < bytes; index++)
+            sprintf(&line[strlen(line)], "%02x ", buffer[index]);
+
+        // Separate the data bytes from the ASCII
+        for (; index < (16 - (offset & 0xf)); index++)
+            sprintf(&line[strlen(line)], "   ");
+        sprintf(&line[strlen(line)], " ");
+
+        // Skip leading bytes
+        for (index = 0; index < (offset & 0xf); index++)
+            sprintf(&line[strlen(line)], " ");
+
+        // Display the ASCII values
+        for (index = 0; index < bytes; index++)
+            sprintf(&line[strlen(line)], "%c", ((buffer[index] < ' ') || (buffer[index] >= 0x7f)) ? '.' : buffer[index]);
+        debugPrintf("%s", line);
+
+        // Set the next line of data
+        buffer += bytes;
+        offset += bytes;
+    }
+}
+
+// Call back from within parser, for end of message
+// Process a complete message incoming from parser
+void um980ProcessMessage(SEMP_PARSE_STATE *parse, uint16_t type)
+{
+    if (ptrUM980->_printRxMessages)
+    {
+
+        // Display the raw message
+        ptrUM980->debugPrintf("");
+        switch (type) // Index into parserTable + 1
+        {
+            case UM980_NMEA_PARSER_INDEX:
+                ptrUM980->debugPrintf("Valid NMEA Sentence: %s, 0x%04x (%d) bytes",
+                                      sempNmeaGetSentenceName(parse),
+                                      parse->length, parse->length);
+                break;
+
+            case UM980_UNICORE_HASH_PARSER_INDEX:
+                ptrUM980->debugPrintf("Valid Unicore Hash (#) Sentence: %s, 0x%04x (%d) bytes",
+                                      sempUnicoreHashGetSentenceName(parse),
+                                      parse->length, parse->length);
+                break;
+
+            case UM980_RTCM_PARSER_INDEX:
+                ptrUM980->debugPrintf("Valid RTCM message: 0x%04x (%d) bytes",
+                                      parse->length, parse->length);
+                break;
+
+            case UM980_UNICORE_BINARY_PARSER_INDEX:
+                ptrUM980->debugPrintf("Valid Unicore message: 0x%04x (%d) bytes",
+                                      parse->length, parse->length);
+                break;
+        }
+    }
+
+    // Dump the contents of the parsed messages
+    if (ptrUM980->_dumpRxMessages)
+        ptrUM980->dumpBuffer(parse->buffer, parse->length);
 }
 
 // Mode commands
