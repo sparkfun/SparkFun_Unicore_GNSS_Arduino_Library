@@ -18,6 +18,11 @@ int pin_UART1_RX = 13;
 #define COMPILE_PARSER_STATE_DISPLAY        0
 #define CAPTURE_BYTE_COUNT                  8192 // 0 means infinite
 
+#define NMEA_PARSER_INDEX           0
+#define UNICORE_HASH_PARSER_INDEX   1
+#define RTCM_PARSER_INDEX           2
+#define UNICORE_BINARY_PARSER_INDEX 3
+
 // Build the table listing all of the parsers
 SEMP_PARSE_ROUTINE const parserTable[] =
 {
@@ -64,24 +69,32 @@ void setup()
     Serial.begin(115200);
     delay(250);
     Serial.println();
-    Serial.println("SparkFun UM980 Example");
+    Serial.println("SparkFun UM980 Example 17");
 
     //We must start the serial port before using it in the library
     SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);
 
-    myGNSS.enableDebugging(); // Print all debug to Serial
+    // Enable output from the Unicore GNSS library
+//    myGNSS.enableDebugging(); // Print all debug to Serial
 
-    // Enable debugging
+    // Enable various debug options in the Unicore GNSS library
+//    myGNSS.enablePrintParserTransitions();
+//    myGNSS.enablePrintBadChecksums();
+//    myGNSS.enablePrintRxMessages();
+//    myGNSS.enableRxMessageDump();
+
+    // Initialize the Unicore GNSS
     if (myGNSS.begin(SerialGNSS) == false) //Give the serial port over to the library
     {
         Serial.println("UM980 failed to respond. Check ports and baud rates. Freezing...");
         while (true);
     }
-//    myGNSS.enablePrintBadChecksums();
-//    myGNSS.enablePrintRxMessages();
-//    myGNSS.enableRxMessageDump();
-
     Serial.println("UM980 detected!");
+
+    // Enable low level debugging for the parser in the Unicore GNSS library
+//    myGNSS.enableParserDebug();
+//    myGNSS.enableParserErrors();
+//    myGNSS.printParserConfiguration();
 
     // Clear saved configurations, satellite ephemerides, position information, and reset baud rate to 115200bps.
     resetUM980();
@@ -111,7 +124,7 @@ void setup()
     }
 
     // Display the firmware version
-    Serial.printf("%s\r\n", myGNSS.getVersionFull());
+    Serial.printf("%s", myGNSS.getVersionFull());
 
     //sendCommand() sends the string directly and checks for the OK response
     //Returns true if the OK was detected
@@ -141,6 +154,7 @@ void setup()
         sempEnableDebugOutput(parse);
 
     Serial.println("Mixture of NMEA, RTCM, and UM980 binary now reporting. Have fun!");
+    Serial.println("----------------------------------------------------------------");
 }
 
 void loop()
