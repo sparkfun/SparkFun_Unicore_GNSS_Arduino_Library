@@ -58,11 +58,33 @@ void setup()
 
   //We can batch commands together and check the overall success
   bool response = true;
-  response &= myGNSS.enableConstellation("BDS");
-  response &= myGNSS.enableConstellation("GAL");
-  response &= myGNSS.disableConstellation("GLO");
-  response &= myGNSS.enableConstellation("QZSS");
-  response &= myGNSS.saveConfiguration(); //Save the current configuration into non-volatile memory (NVM)
+  if (!myGNSS.enableConstellation("BDS"))
+  {
+    response = false;
+    Serial.println("Failed to enable BDS constellation");
+  }
+  if (!myGNSS.enableConstellation("GAL"))
+  {
+    response = false;
+    Serial.println("Failed to enable GAL constellation");
+  }
+  if (!myGNSS.disableConstellation("GLO"))
+  {
+    response = false;
+    Serial.println("Failed to disable GLO constellation");
+  }
+  if (!myGNSS.enableConstellation("QZSS"))
+  {
+    response = false;
+    Serial.println("Failed to enable QZSS constellation");
+  }
+
+  //Save the current configuration into non-volatile memory (NVM)
+  if (!myGNSS.saveConfiguration())
+  {
+    response = false;
+    Serial.println("Failed to save the configuration");
+  }
 
   if (response == true)
     Serial.println("Configuration complete!");
