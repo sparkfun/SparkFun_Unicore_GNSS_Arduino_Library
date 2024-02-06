@@ -58,7 +58,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("SparkFun UM980 Example");
+  Serial.println("SparkFun UM980 Example 5");
 
   // Initialize the parser
   parse = sempBeginParser(parserTable, parserCount,
