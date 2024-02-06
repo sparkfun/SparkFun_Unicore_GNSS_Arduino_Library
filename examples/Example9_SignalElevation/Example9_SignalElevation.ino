@@ -5,7 +5,7 @@
   Date: October 2nd, 2023
   License: MIT. Please see LICENSE.md for more information.
 
-  This example shows how set the Elevation Angle and minimum CN0 value required from a 
+  This example shows how set the Elevation Angle and minimum CN0 value required from a
   satellite to be included in the position calculation.
   These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
@@ -36,7 +36,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("SparkFun UM980 Example");
+  Serial.println("SparkFun UM980 Example 9");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);

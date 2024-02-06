@@ -6,7 +6,7 @@
   License: MIT. Please see LICENSE.md for more information.
 
   This example shows how to query a UM980 GNSS module for signal quality and fix type.
-  These examples are targeted for an ESP32 platform but any platform that has multiple 
+  These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
 
   Feel like supporting open source hardware?
@@ -37,7 +37,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("SparkFun UM980 Example");
+  Serial.println("SparkFun UM980 Example 3");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);

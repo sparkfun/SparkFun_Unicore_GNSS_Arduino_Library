@@ -10,7 +10,7 @@
   while still connected to the Arduino. Good for viewing raw output from a given command.
 
   For example, type CONFIG to see the module's current configuration response.
-  
+
   These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
 
@@ -40,7 +40,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("SparkFun UM980 Example");
+  Serial.println("SparkFun UM980 Example 2");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);

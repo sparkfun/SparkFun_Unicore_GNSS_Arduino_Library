@@ -7,7 +7,7 @@
 
   While the SparkFun UM980 Arduino library covers most of the features in the UM980, there
   may be a special command that is needed but not supported. This sketch shows how to send commands direct.
-  
+
   These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
 
@@ -37,7 +37,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("SparkFun UM980 Example");
+  Serial.println("SparkFun UM980 Example 13");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);

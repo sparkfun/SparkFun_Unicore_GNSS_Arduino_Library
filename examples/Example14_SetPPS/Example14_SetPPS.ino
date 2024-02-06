@@ -5,7 +5,7 @@
   Date: October 2nd, 2023
   License: MIT. Please see LICENSE.md for more information.
 
-  The example shows how to configure the PPS signal's width, frequency, and polarity.  
+  The example shows how to configure the PPS signal's width, frequency, and polarity.
   These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
 
@@ -35,7 +35,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("SparkFun UM980 Example");
+  Serial.println("SparkFun UM980 Example 14");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);

@@ -22,10 +22,10 @@
   Note: Almost any ESP32 pins can be used for serial.
   Connect a dual or triband GNSS antenna: https://www.sparkfun.com/products/21801
 
-  68 RTCM messages supported: 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1009, 1010, 1011, 1012, 1013, 1019, 1020, 
-  1033, 1042, 1044, 1045, 1046, 1071, 1072, 1073, 1074, 1075, 1076, 1077, 1081, 1082, 1083, 1084, 1085, 1086, 1087, 
-  1091, 1092, 1093, 1094, 1095, 1096, 1097, 1101, 1102, 1103, 1104, 1105, 1106, 1107, 1111, 1112, 1113, 1114, 1115, 
-  1116, 1117, 1121, 1122, 1123, 1124, 1125, 1126, 1127, 1131, 1132, 1133, 1134, 1135, 1136, 1137, 
+  68 RTCM messages supported: 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1009, 1010, 1011, 1012, 1013, 1019, 1020,
+  1033, 1042, 1044, 1045, 1046, 1071, 1072, 1073, 1074, 1075, 1076, 1077, 1081, 1082, 1083, 1084, 1085, 1086, 1087,
+  1091, 1092, 1093, 1094, 1095, 1096, 1097, 1101, 1102, 1103, 1104, 1105, 1106, 1107, 1111, 1112, 1113, 1114, 1115,
+  1116, 1117, 1121, 1122, 1123, 1124, 1125, 1126, 1127, 1131, 1132, 1133, 1134, 1135, 1136, 1137,
 
 */
 
@@ -43,7 +43,7 @@ void setup()
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("SparkFun UM980 Example");
+  Serial.println("SparkFun UM980 Example 16");
 
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);
@@ -71,7 +71,7 @@ void setup()
   {
     char myTest[100] = {0};
     sprintf(myTest, "RTCM%04d", x);
-    if(myGNSS.setNMEAPortMessage(myTest, comPort, 1) == true) 
+    if(myGNSS.setNMEAPortMessage(myTest, comPort, 1) == true)
       supportedMessages[supportedCount++] = x;
     delay(delayBetweenCommands);
   }
