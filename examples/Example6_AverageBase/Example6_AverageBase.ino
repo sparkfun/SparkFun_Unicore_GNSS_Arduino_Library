@@ -26,6 +26,27 @@ int pin_UART1_TX = 4;
 int pin_UART1_RX = 13;
 
 #include <SparkFun_Unicore_GNSS_Arduino_Library.h> //http://librarymanager/All#SparkFun_Unicore_GNSS
+#include <SparkFun_Extensible_Message_Parser.h>    //http://librarymanager/All#SparkFun_Extensible_Message_Parser
+
+#define NMEA_PARSER_INDEX           0
+#define RTCM_PARSER_INDEX           1
+
+// Build the table listing all of the parsers
+SEMP_PARSE_ROUTINE const parserTable[] =
+{
+    sempNmeaPreamble,
+    sempRtcmPreamble,
+};
+const int parserCount = sizeof(parserTable) / sizeof(parserTable[0]);
+
+const char * const parserNames[] =
+{
+    "NMEA Parser",
+    "RTCM Parser",
+};
+const int parserNameCount = sizeof(parserNames) / sizeof(parserNames[0]);
+
+SEMP_PARSE_STATE *parse;               // State of the parsers
 
 UM980 myGNSS;
 
@@ -84,13 +105,94 @@ void setup()
 
   myGNSS.saveConfiguration(); //Save the current configuration into non-volatile memory (NVM)
 
-  Serial.println("Output will be a mix of NMEA and binary RTCM non-visible characters");
+  // Initialize the parser
+  parse = sempBeginParser(parserTable, parserCount,
+                          parserNames, parserNameCount,
+                          0, 3000, processMessage, "Example 17 Parser");
+  if (!parse)
+    while (1)
+    {
+      Serial.println("HALTED: Failed to initialize the parser!");
+      sleep(15);
+    }
+
+  Serial.println("Output will be a mix of NMEA and binary RTCM");
 }
 
 void loop()
 {
-  //Read in NMEA from the UM980
-  //RTCM is binary and will appear as random characters.
+  // Read the raw data one byte at a time and update the parser state
+  // based on the incoming byte
   while (SerialGNSS.available())
-    Serial.write(SerialGNSS.read());
+  {
+    // Read the byte from the UM980
+    uint8_t incoming = SerialGNSS.read();
+
+    // Parse this byte
+    sempParseNextByte(parse, incoming);
+  }
+}
+
+// Call back from within parser, for end of message
+// Process a complete message incoming from parser
+void processMessage(SEMP_PARSE_STATE *parse, uint16_t type)
+{
+  SEMP_SCRATCH_PAD *scratchPad = (SEMP_SCRATCH_PAD *)parse->scratchPad;
+  char *typeName;
+
+  // Display the raw message
+  // The type value is the index into the raw data array
+  Serial.println();
+  Serial.printf("Valid %s message: 0x%04x (%d) bytes\r\n",
+                parserNames[type], parse->length, parse->length);
+  dumpBuffer(parse->buffer, parse->length);
+}
+
+// Display the contents of a buffer
+void dumpBuffer(const uint8_t *buffer, uint16_t length)
+{
+  int bytes;
+  const uint8_t *end;
+  int index;
+  char line[128];
+  uint16_t offset;
+
+  end = &buffer[length];
+  offset = 0;
+  while (buffer < end)
+  {
+    // Determine the number of bytes to display on the line
+    bytes = end - buffer;
+    if (bytes > (16 - (offset & 0xf)))
+      bytes = 16 - (offset & 0xf);
+
+    // Display the offset
+    sprintf(line, "0x%08lx: ", offset);
+
+    // Skip leading bytes
+    for (index = 0; index < (offset & 0xf); index++)
+      sprintf(&line[strlen(line)], "   ");
+
+    // Display the data bytes
+    for (index = 0; index < bytes; index++)
+      sprintf(&line[strlen(line)], "%02x ", buffer[index]);
+
+    // Separate the data bytes from the ASCII
+    for (; index < (16 - (offset & 0xf)); index++)
+      sprintf(&line[strlen(line)], "   ");
+    sprintf(&line[strlen(line)], " ");
+
+    // Skip leading bytes
+    for (index = 0; index < (offset & 0xf); index++)
+      sprintf(&line[strlen(line)], " ");
+
+    // Display the ASCII values
+    for (index = 0; index < bytes; index++)
+      sprintf(&line[strlen(line)], "%c", ((buffer[index] < ' ') || (buffer[index] >= 0x7f)) ? '.' : buffer[index]);
+    Serial.println(line);
+
+    // Set the next line of data
+    buffer += bytes;
+    offset += bytes;
+  }
 }
