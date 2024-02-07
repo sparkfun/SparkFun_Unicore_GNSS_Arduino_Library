@@ -8,6 +8,7 @@
   The documentation for the UM980 does not explicitly state which RTCM messages are supported
   but by sending the enable command to the module we can insinuate which are supported.
   This sketch sends the 'RTCMxxxx' command and looks for an OK.
+  The messages that successfully receive an OK will be reported at the completion of the sketch.
   These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
 
@@ -48,7 +49,7 @@ void setup()
   //We must start the serial port before using it in the library
   SerialGNSS.begin(115200, SERIAL_8N1, pin_UART1_RX, pin_UART1_TX);
 
-  myGNSS.enableDebugging(); // Print all debug to Serial
+  // myGNSS.enableDebugging(); // Print all debug to Serial
 
   if (myGNSS.begin(SerialGNSS) == false) //Give the serial port over to the library
   {
