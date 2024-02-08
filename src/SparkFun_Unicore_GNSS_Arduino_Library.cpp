@@ -803,9 +803,18 @@ bool UM980::setRTCMMessage(const char *sentenceType, float outputRate)
 // Warning, each message has to be individually re-enabled
 bool UM980::disableOutput()
 {
-    stopAutoReports(); // Remove pointers so we will re-init next check
+    for (int x = 0; x < 5; x++)
+    {
+        if (sendCommand("UNLOG") == true)
+        {
+            stopAutoReports(); // Remove pointers so we will re-init next check
+            return (true);
+        }
 
-    return (sendCommand("UNLOG"));
+        delay(10 * x);
+    }
+
+    return (false);
 }
 
 // Disable all messages on a given port
