@@ -421,7 +421,6 @@ void um980ProcessMessage(SEMP_PARSE_STATE *parse, uint16_t type)
 
     if (ptrUM980->_printRxMessages)
     {
-
         // Display the raw message
         ptrUM980->debugPrintf("");
         switch (type)

@@ -141,9 +141,9 @@ class UM980
     bool staleEcef();
     void stopAutoReports(); // Delete all pointers to force reinit next time a helper function is called
 
-    Um980Result getGeodetic(uint16_t maxWaitMs = 500);
-    Um980Result updateEcef(uint16_t maxWaitMs = 500);
-    Um980Result updateDateTime(uint16_t maxWaitMs = 500);
+    Um980Result getGeodetic(uint16_t maxWaitMs = 1500);
+    Um980Result updateEcef(uint16_t maxWaitMs = 1500);
+    Um980Result updateDateTime(uint16_t maxWaitMs = 1500);
 
     Print *_debugPort = nullptr; // The stream to send debug messages to if enabled. Usually Serial.
 
@@ -237,12 +237,12 @@ class UM980
     void serialPrintln(const char *command);
     void clearBuffer();
 
-    bool sendCommand(const char *command, uint16_t maxWaitMs = 500);
-    Um980Result sendQuery(const char *command, uint16_t maxWaitMs = 500);
-    Um980Result sendString(const char *command, uint16_t maxWaitMs = 500);
+    bool sendCommand(const char *command, uint16_t maxWaitMs = 1500);
+    Um980Result sendQuery(const char *command, uint16_t maxWaitMs = 1500);
+    Um980Result sendString(const char *command, uint16_t maxWaitMs = 1500);
 
     // Main helper functions
-    double getLatitude(uint16_t maxWaitMs = 500);
+    double getLatitude(uint16_t maxWaitMs = 1500);
     double getLongitude();
     double getAltitude();
     double getHorizontalSpeed();
@@ -291,7 +291,7 @@ class UM980
     char *getID();
     char *getCompileTime();
 
-    char *getVersionFull(uint16_t maxWaitMs = 500);
+    char *getVersionFull(uint16_t maxWaitMs = 1500);
 
     void unicoreHandler(uint8_t *data, uint16_t length);
 
