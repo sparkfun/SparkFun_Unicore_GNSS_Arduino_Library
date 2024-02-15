@@ -230,7 +230,7 @@ class UM980
     bool disableOutputPort(const char *comName);
     bool factoryReset();
     bool reset();
-    bool saveConfiguration();
+    bool saveConfiguration(uint16_t maxWaitMs = 1500);
 
     uint16_t serialAvailable();
     uint8_t serialRead();

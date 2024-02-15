@@ -865,9 +865,9 @@ bool UM980::reset()
 // Saves the current configuration into non-volatile memory (NVM),
 // including LOG messages (except those triggered by ONCE), port
 // configuration, etc.
-bool UM980::saveConfiguration()
+bool UM980::saveConfiguration(uint16_t maxWait)
 {
-    return (sendCommand("SAVECONFIG"));
+    return (sendCommand("SAVECONFIG", maxWait));
 }
 
 // Abstraction of the serial interface
