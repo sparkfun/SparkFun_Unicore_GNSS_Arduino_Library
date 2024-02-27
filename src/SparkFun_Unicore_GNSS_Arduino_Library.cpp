@@ -81,14 +81,13 @@
 //----------------------------------------
 
 // parserTable index values
-#define UM980_NMEA_PARSER_INDEX             0
-#define UM980_UNICORE_HASH_PARSER_INDEX     1
-#define UM980_RTCM_PARSER_INDEX             2
-#define UM980_UNICORE_BINARY_PARSER_INDEX   3
+#define UM980_NMEA_PARSER_INDEX 0
+#define UM980_UNICORE_HASH_PARSER_INDEX 1
+#define UM980_RTCM_PARSER_INDEX 2
+#define UM980_UNICORE_BINARY_PARSER_INDEX 3
 
 // Build the table listing all of the parsers
-SEMP_PARSE_ROUTINE const parserTable[] =
-{
+SEMP_PARSE_ROUTINE const parserTable[] = {
     sempNmeaPreamble,
     sempUnicoreHashPreamble,
     sempRtcmPreamble,
@@ -96,8 +95,7 @@ SEMP_PARSE_ROUTINE const parserTable[] =
 };
 const int parserCount = sizeof(parserTable) / sizeof(parserTable[0]);
 
-const char * const parserNames[] =
-{
+const char *const parserNames[] = {
     "UN980 NMEA Parser",
     "UM980 Unicore Hash (#) Parser",
     "UM980 RTCM Parser",
@@ -106,7 +104,7 @@ const char * const parserNames[] =
 const int parserNameCount = sizeof(parserNames) / sizeof(parserNames[0]);
 
 // Account for the largest message
-#define BUFFER_LENGTH   3000
+#define BUFFER_LENGTH 3000
 
 //----------------------------------------
 // Globals
@@ -161,7 +159,7 @@ bool badNmeaChecksum(SEMP_PARSE_STATE *parse)
 }
 
 // Translate the state value into an ASCII state name
-const char * um980GetStateName(SEMP_PARSE_STATE *parse)
+const char *um980GetStateName(SEMP_PARSE_STATE *parse)
 {
     const char *name;
 
@@ -224,11 +222,9 @@ bool UM980::begin(HardwareSerial &serialPort, Print *parserDebug, Print *parserE
     _hwSerialPort = &serialPort;
 
     // Initialize the parser
-    _sempParse = sempBeginParser(parserTable, parserCount,
-                                 parserNames, parserNameCount,
-                                 0, BUFFER_LENGTH, um980ProcessMessage,
-                                 "SFE_Unicore_GNSS_Library", parserError,
-                                 parserDebug, badNmeaChecksum);
+    _sempParse =
+        sempBeginParser(parserTable, parserCount, parserNames, parserNameCount, 0, BUFFER_LENGTH, um980ProcessMessage,
+                        "SFE_Unicore_GNSS_Library", parserError, parserDebug, badNmeaChecksum);
     if (!_sempParse)
     {
         debugPrintf("UM980: Failed to initialize the parser!");
@@ -275,6 +271,14 @@ bool UM980::isConnected()
         delay(500);
     }
     return (false);
+}
+
+// If another task outside of this library is accessing the same Serial hardware, it can
+// check to see if this library currently needs exclusive read/write access for a short period.
+// If isBlocking is true, external consumers should not read/write to the Serial hardware
+bool UM980::isBlocking()
+{
+    return(unicoreLibrarySemaphoreBlock);
 }
 
 // Calling this function with nothing sets the debug port to Serial
@@ -331,9 +335,8 @@ bool UM980::updateOnce()
             endName = um980GetStateName(_sempParse);
 
             // Display the parser state transition
-            debugPrintf("UM980: 0x%02x (%c), crc: 0x%08x, state: %s --> %s",
-                        incoming, ((incoming >= ' ') && (incoming < 0x7f)) ? incoming : '.',
-                        _sempParse->crc, startName, endName);
+            debugPrintf("UM980: 0x%02x (%c), crc: 0x%08x, state: %s --> %s", incoming,
+                        ((incoming >= ' ') && (incoming < 0x7f)) ? incoming : '.', _sempParse->crc, startName, endName);
         }
         return (true);
     }
@@ -380,7 +383,8 @@ void UM980::dumpBuffer(const uint8_t *buffer, uint16_t length)
 
         // Display the ASCII values
         for (index = 0; index < bytes; index++)
-            sprintf(&line[strlen(line)], "%c", ((buffer[index] < ' ') || (buffer[index] >= 0x7f)) ? '.' : buffer[index]);
+            sprintf(&line[strlen(line)], "%c",
+                    ((buffer[index] < ' ') || (buffer[index] >= 0x7f)) ? '.' : buffer[index]);
         debugPrintf("%s", line);
 
         // Set the next line of data
@@ -425,27 +429,23 @@ void um980ProcessMessage(SEMP_PARSE_STATE *parse, uint16_t type)
         ptrUM980->debugPrintf("");
         switch (type)
         {
-            case UM980_NMEA_PARSER_INDEX:
-                ptrUM980->debugPrintf("Valid NMEA Sentence: %s, 0x%04x (%d) bytes",
-                                      sempNmeaGetSentenceName(parse),
-                                      parse->length, parse->length);
-                break;
+        case UM980_NMEA_PARSER_INDEX:
+            ptrUM980->debugPrintf("Valid NMEA Sentence: %s, 0x%04x (%d) bytes", sempNmeaGetSentenceName(parse),
+                                  parse->length, parse->length);
+            break;
 
-            case UM980_UNICORE_HASH_PARSER_INDEX:
-                ptrUM980->debugPrintf("Valid Unicore Hash (#) Sentence: %s, 0x%04x (%d) bytes",
-                                      sempUnicoreHashGetSentenceName(parse),
-                                      parse->length, parse->length);
-                break;
+        case UM980_UNICORE_HASH_PARSER_INDEX:
+            ptrUM980->debugPrintf("Valid Unicore Hash (#) Sentence: %s, 0x%04x (%d) bytes",
+                                  sempUnicoreHashGetSentenceName(parse), parse->length, parse->length);
+            break;
 
-            case UM980_RTCM_PARSER_INDEX:
-                ptrUM980->debugPrintf("Valid RTCM message: 0x%04x (%d) bytes",
-                                      parse->length, parse->length);
-                break;
+        case UM980_RTCM_PARSER_INDEX:
+            ptrUM980->debugPrintf("Valid RTCM message: 0x%04x (%d) bytes", parse->length, parse->length);
+            break;
 
-            case UM980_UNICORE_BINARY_PARSER_INDEX:
-                ptrUM980->debugPrintf("Valid Unicore message: 0x%04x (%d) bytes",
-                                      parse->length, parse->length);
-                break;
+        case UM980_UNICORE_BINARY_PARSER_INDEX:
+            ptrUM980->debugPrintf("Valid Unicore message: 0x%04x (%d) bytes", parse->length, parse->length);
+            break;
         }
     }
 
@@ -456,62 +456,59 @@ void um980ProcessMessage(SEMP_PARSE_STATE *parse, uint16_t type)
     // Process the message
     switch (type)
     {
-        case UM980_UNICORE_BINARY_PARSER_INDEX:
-            ptrUM980->unicoreHandler(parse->buffer, parse->length);
-            break;
+    case UM980_UNICORE_BINARY_PARSER_INDEX:
+        ptrUM980->unicoreHandler(parse->buffer, parse->length);
+        break;
 
-        case UM980_RTCM_PARSER_INDEX:
-            break;
+    case UM980_RTCM_PARSER_INDEX:
+        break;
 
-        case UM980_UNICORE_HASH_PARSER_INDEX:
+    case UM980_UNICORE_HASH_PARSER_INDEX:
+        // Does this response contain the command we are looking for?
+        if (strcasecmp((char *)scratchPad->unicoreHash.sentenceName, ptrUM980->commandName) == 0) // Found
+        {
+            ptrUM980->debugPrintf("UM980: Query response: %s", parse->buffer);
+            ptrUM980->commandResponse = UM980_RESULT_RESPONSE_COMMAND_OK;
+        }
+        break;
+
+    case UM980_NMEA_PARSER_INDEX:
+        //$command,MODE,response: OK*5D
+        if (strcasecmp((char *)scratchPad->nmea.sentenceName, "command") != 0 &&
+            strcasecmp((char *)scratchPad->nmea.sentenceName, "MASK") != 0 &&
+            strcasecmp((char *)scratchPad->nmea.sentenceName, "CONFIG") != 0) // Found
+
+            // Unknown response, ignore this message
+            ptrUM980->debugPrintf("UM980: Message ignored: %s", parse->buffer);
+        else
+        {
             // Does this response contain the command we are looking for?
-            if (strcasecmp((char *)scratchPad->unicoreHash.sentenceName, ptrUM980->commandName) == 0) // Found
+            // It may be anywhere in the response:
+            // $command,MODE,response: OK*5D
+            char *responsePointer = strcasestr((char *)parse->buffer, ptrUM980->commandName);
+            if (responsePointer != nullptr) // Found
             {
-                ptrUM980->debugPrintf("UM980: Query response: %s",
-                                      parse->buffer);
-                ptrUM980->commandResponse = UM980_RESULT_RESPONSE_COMMAND_OK;
-            }
-            break;
+                // Display the command response
+                ptrUM980->debugPrintf("UM980: Command response: %s", parse->buffer);
 
-        case UM980_NMEA_PARSER_INDEX:
-            //$command,MODE,response: OK*5D
-            if (strcasecmp((char *)scratchPad->nmea.sentenceName, "command") != 0 &&
-                strcasecmp((char *)scratchPad->nmea.sentenceName, "MASK") != 0 &&
-                strcasecmp((char *)scratchPad->nmea.sentenceName, "CONFIG") != 0) // Found
-
-                // Unknown response, ignore this message
-                ptrUM980->debugPrintf("UM980: Message ignored: %s", parse->buffer);
-            else
-            {
-                // Does this response contain the command we are looking for?
-                // It may be anywhere in the response:
-                // $command,MODE,response: OK*5D
-                char *responsePointer = strcasestr((char *)parse->buffer, ptrUM980->commandName);
+                // Check to see if we got a command response
+                responsePointer = strcasestr((char *)parse->buffer, "OK");
                 if (responsePointer != nullptr) // Found
                 {
-                    // Display the command response
-                    ptrUM980->debugPrintf("UM980: Command response: %s",
-                                          parse->buffer);
+                    ptrUM980->commandResponse = UM980_RESULT_RESPONSE_COMMAND_OK;
+                    return;
+                }
 
-                    // Check to see if we got a command response
-                    responsePointer = strcasestr((char *)parse->buffer, "OK");
-                    if (responsePointer != nullptr) // Found
-                    {
-                        ptrUM980->commandResponse = UM980_RESULT_RESPONSE_COMMAND_OK;
-                        return;
-                    }
-
-                    responsePointer = strcasestr((char *)parse->buffer, "PARSING");
-                    if (responsePointer != nullptr) // Found
-                    {
-                        ptrUM980->debugPrintf("UM980: Error response: %s",
-                                              parse->buffer);
-                        ptrUM980->commandResponse = UM980_RESULT_RESPONSE_COMMAND_ERROR;
-                        return;
-                    }
+                responsePointer = strcasestr((char *)parse->buffer, "PARSING");
+                if (responsePointer != nullptr) // Found
+                {
+                    ptrUM980->debugPrintf("UM980: Error response: %s", parse->buffer);
+                    ptrUM980->commandResponse = UM980_RESULT_RESPONSE_COMMAND_ERROR;
+                    return;
                 }
             }
-            break;
+        }
+        break;
     }
 }
 
@@ -966,6 +963,8 @@ Um980Result UM980::sendQuery(const char *command, uint16_t maxWaitMs)
     strncpy(commandName, command, sizeof(commandName));
     commandResponse = UM980_RESULT_RESPONSE_COMMAND_WAITING; // Reset
 
+    unicoreLibrarySemaphoreBlock = true; // Prevent external tasks from harvesting serial data
+
     // Feed the parser until we see a response to the command
     int wait = 0;
     while (1)
@@ -973,6 +972,7 @@ Um980Result UM980::sendQuery(const char *command, uint16_t maxWaitMs)
         if (wait++ == maxWaitMs)
         {
             debugPrintf("UM980: Response timeout");
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
             return (UM980_RESULT_TIMEOUT_RESPONSE);
         }
 
@@ -987,11 +987,14 @@ Um980Result UM980::sendQuery(const char *command, uint16_t maxWaitMs)
         if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_ERROR)
         {
             debugPrintf("UM980: Query failure");
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
             return (UM980_RESULT_RESPONSE_COMMAND_ERROR);
         }
 
         delay(1);
     }
+
+    unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
 
     return (UM980_RESULT_OK);
 }
@@ -1009,6 +1012,8 @@ Um980Result UM980::sendString(const char *command, uint16_t maxWaitMs)
     debugPrintf("UM980: Sending command %s", command);
     strncpy(commandName, command, sizeof(commandName));      // Copy to class so that parsers can see it
     commandResponse = UM980_RESULT_RESPONSE_COMMAND_WAITING; // Reset
+
+    unicoreLibrarySemaphoreBlock = true; // Prevent external tasks from harvesting serial data
 
     serialPrintln(command);
 
@@ -1038,6 +1043,8 @@ Um980Result UM980::sendString(const char *command, uint16_t maxWaitMs)
 
         delay(1);
     }
+
+    unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
 
     return (UM980_RESULT_OK);
 }
