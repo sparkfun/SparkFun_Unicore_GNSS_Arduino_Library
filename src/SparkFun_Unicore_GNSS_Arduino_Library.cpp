@@ -976,7 +976,7 @@ Um980Result UM980::sendQuery(const char *command, uint16_t maxWaitMs)
             return (UM980_RESULT_TIMEOUT_RESPONSE);
         }
 
-        updateOnce(); // Will call um980EomHandler()
+        updateOnce(); // Will call um980ProcessMessage()
 
         if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_OK)
         {
@@ -1022,7 +1022,7 @@ Um980Result UM980::sendString(const char *command, uint16_t maxWaitMs)
             return (UM980_RESULT_TIMEOUT_RESPONSE);
         }
 
-        updateOnce(); // Will call um980EomHandler()
+        updateOnce(); // Will call um980ProcessMessage()
 
         if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_OK)
         {
