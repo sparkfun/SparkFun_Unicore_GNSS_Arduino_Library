@@ -137,8 +137,8 @@ class UM980
     unsigned long lastUpdateDateTime = 0;
     unsigned long lastUpdateVersion = 0;
 
-    bool staleDateTime();
-    bool staleEcef();
+    bool isNmeaFixed(); // Returns true when GNGGA NMEA reports position status >= 2
+
     void stopAutoReports(); // Delete all pointers to force reinit next time a helper function is called
 
     Um980Result getGeodetic(uint16_t maxWaitMs = 1500);
@@ -161,6 +161,13 @@ class UM980
     bool _printRxMessages = false;        // Display the received message summary
     bool _dumpRxMessages = false;         // Display the received message hex dump
 
+    uint8_t nmeaPositionStatus = 0; // Position psition status obtained from GNGGA NMEA
+
+    // By default, library will attempt to start RECTIME and BESTNAV regardless of GNSS fix.
+    // This may lead to command timeouts as the UM980 does not appear to respond to BESTNAVB commands if 3D fix is not achieved.
+    // Set startBinartBeforeFix = false via disableBinaryBeforeFix() to block binary commands before a fix is achieved
+    bool startBinaryBeforeFix = true; 
+
     bool begin(HardwareSerial &serialPort, Print *parserDebug = nullptr, Print *parserError = &Serial);
     bool isConnected();
     bool isBlocking();
@@ -175,6 +182,9 @@ class UM980
     void disableParserDebug();
     void enableParserErrors(Print *print = &Serial);
     void disableParserErrors();
+
+    void enableBinaryBeforeFix();
+    void disableBinaryBeforeFix();
 
     void enablePrintBadChecksums();
     void disablePrintBadChecksums();

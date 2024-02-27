@@ -278,7 +278,7 @@ bool UM980::isConnected()
 // If isBlocking is true, external consumers should not read/write to the Serial hardware
 bool UM980::isBlocking()
 {
-    return(unicoreLibrarySemaphoreBlock);
+    return (unicoreLibrarySemaphoreBlock);
 }
 
 // Calling this function with nothing sets the debug port to Serial
@@ -430,8 +430,8 @@ void um980ProcessMessage(SEMP_PARSE_STATE *parse, uint16_t type)
         switch (type)
         {
         case UM980_NMEA_PARSER_INDEX:
-            ptrUM980->debugPrintf("Unicore Lib: Valid NMEA Sentence: %s, 0x%04x (%d) bytes", sempNmeaGetSentenceName(parse),
-                                  parse->length, parse->length);
+            ptrUM980->debugPrintf("Unicore Lib: Valid NMEA Sentence: %s, 0x%04x (%d) bytes",
+                                  sempNmeaGetSentenceName(parse), parse->length, parse->length);
             break;
 
         case UM980_UNICORE_HASH_PARSER_INDEX:
@@ -444,7 +444,8 @@ void um980ProcessMessage(SEMP_PARSE_STATE *parse, uint16_t type)
             break;
 
         case UM980_UNICORE_BINARY_PARSER_INDEX:
-            ptrUM980->debugPrintf("Unicore Lib: Valid Unicore message: 0x%04x (%d) bytes", parse->length, parse->length);
+            ptrUM980->debugPrintf("Unicore Lib: Valid Unicore message: 0x%04x (%d) bytes", parse->length,
+                                  parse->length);
             break;
         }
     }
@@ -473,13 +474,23 @@ void um980ProcessMessage(SEMP_PARSE_STATE *parse, uint16_t type)
         break;
 
     case UM980_NMEA_PARSER_INDEX:
-        //$command,MODE,response: OK*5D
+
+        // Is this a NMEA response or command response?
+
         if (strcasecmp((char *)scratchPad->nmea.sentenceName, "command") != 0 &&
             strcasecmp((char *)scratchPad->nmea.sentenceName, "MASK") != 0 &&
-            strcasecmp((char *)scratchPad->nmea.sentenceName, "CONFIG") != 0) // Found
+            strcasecmp((char *)scratchPad->nmea.sentenceName, "CONFIG") != 0)
+        {
+            // command, MASK, CONFIG not found
+
+            if (strcasecmp((char *)scratchPad->nmea.sentenceName, "GNGGA") == 0)
+            {
+                ptrUM980->debugPrintf("um980ProcessMessage GNGGA");
+            }
 
             // Unknown response, ignore this message
             ptrUM980->debugPrintf("Unicore Lib: Message ignored: %s", parse->buffer);
+        }
         else
         {
             // Does this response contain the command we are looking for?
@@ -1154,7 +1165,7 @@ void UM980::unicoreHandler(uint8_t *response, uint16_t length)
     }
     else if (messageID == messageIdBestnavXyz)
     {
-        // debugPrintf("BestNavXyz Handler");
+        debugPrintf("BestNavXyz Handler");
         CHECK_POINTER_VOID(packetBESTNAVXYZ, initBestnavXyz); // Check that RAM has been allocated
 
         lastUpdateEcef = millis(); // Update stale marker
@@ -1172,7 +1183,7 @@ void UM980::unicoreHandler(uint8_t *response, uint16_t length)
     }
     else if (messageID == messageIdVersion)
     {
-        // debugPrintf("Version Handler");
+        debugPrintf("Version Handler");
         CHECK_POINTER_VOID(packetVERSION, initVersion); // Check that RAM has been allocated
 
         lastUpdateVersion = millis(); // Update stale marker
@@ -1188,7 +1199,48 @@ void UM980::unicoreHandler(uint8_t *response, uint16_t length)
     }
     else
     {
-        debugPrintf("Unknown message id: %d\r\n", messageID);
+        // Is this a NMEA sentence?
+        if (response[0] == '$')
+        {
+            response[length] = '\0'; // Force terminator because strncasestr does not exist
+
+            // The UM980 does not respond to binary requests when there is no GNSS reception.
+            // Block BestNavB, etc commands if there is no fix.
+            // Look for GNGGA NMEA then extract GNSS position status (spot 6).
+            // $GNGGA,181535.00,,,,,0,00,9999.0,,,,,,*43
+            char *responsePointer = strcasestr((char *)response, "GNGGA");
+            if (responsePointer != nullptr) // Found
+            {
+                char gngga[100];
+                strncpy(gngga, (const char *)response, length); // Make copy before strtok
+
+                debugPrintf("Unicore Lib: GNGGA message: %s\r\n", gngga);
+
+                char *pt;
+                pt = strtok(gngga, ",");
+                int counter = 0;
+                while (pt != NULL)
+                {
+                    int spotValue = atoi(pt);
+                    // Serial.printf("counter: %d spot: %s spotvalue: %d\r\n", counter, pt, spotValue);
+                    if (counter++ == 6)
+                    {
+                        nmeaPositionStatus = spotValue;
+                        debugPrintf("nmeaPositionStatus: %d\r\n", nmeaPositionStatus);
+                    }
+                    pt = strtok(NULL, ",");
+                }
+            }
+            else
+            {
+                // Unhandled NMEA message
+                // debugPrintf("Unicore Lib: Unhandled NMEA sentence (%d bytes): %s\r\n", length, (char *)response);
+            }
+        }
+        else
+        {
+            debugPrintf("Unicore Lib: Unknown message id: %d\r\n", messageID);
+        }
     }
 }
 
@@ -1238,6 +1290,19 @@ bool UM980::initVersion()
 // Allocate RAM for packetBESTNAV and initialize it
 bool UM980::initBestnav(uint8_t rate)
 {
+    if ((startBinaryBeforeFix == false) && (isNmeaFixed() == false))
+    {
+        debugPrintf("Unicore Lib: BestNav no fix");
+        return (false);
+    }
+    else
+    {
+        if(startBinaryBeforeFix == true)
+            Serial.println("startBinaryBeforeFix is true");
+            if(isNmeaFixed() == true)
+                Serial.println("isNmeaFixed() is true");
+    }
+
     packetBESTNAV = new UNICORE_BESTNAV_t; // Allocate RAM for the main struct
     if (packetBESTNAV == nullptr)
     {
@@ -1283,6 +1348,12 @@ bool UM980::initBestnav(uint8_t rate)
 // Allocate RAM for packetBESTNAVXYZ and initialize it
 bool UM980::initBestnavXyz(uint8_t rate)
 {
+    if ((startBinaryBeforeFix == false) && (isNmeaFixed() == false))
+    {
+        debugPrintf("Unicore Lib: BestNavXyz no fix");
+        return (false);
+    }
+
     packetBESTNAVXYZ = new UNICORE_BESTNAVXYZ_t; // Allocate RAM for the main struct
     if (packetBESTNAVXYZ == nullptr)
     {
@@ -1328,6 +1399,12 @@ bool UM980::initBestnavXyz(uint8_t rate)
 // Allocate RAM for packetRECTIME and initialize it
 bool UM980::initRectime(uint8_t rate)
 {
+    if ((startBinaryBeforeFix == false) && (isNmeaFixed() == false))
+    {
+        debugPrintf("Unicore Lib: RecTime no fix");
+        return (false);
+    }
+
     packetRECTIME = new UNICORE_RECTIME_t; // Allocate RAM for the main struct
     if (packetRECTIME == nullptr)
     {
@@ -1617,4 +1694,25 @@ char *UM980::getVersionFull(uint16_t maxWaitMs)
     else if (result == UM980_RESULT_RESPONSE_COMMAND_ERROR)
         return ((char *)"Error1");
     return ((char *)"Error2");
+}
+
+// Returns true when GNGGA NMEA reports position status >= 2
+bool UM980::isNmeaFixed()
+{
+    if (nmeaPositionStatus >= 2)
+        return (true);
+    return (false);
+}
+
+// By default, library will attempt to start RECTIME and BESTNAV regardless of GNSS fix
+// This may lead to command timeouts as the UM980 does not appear to respond to BESTNAVB commands if 3D fix is not
+// achieved. Set startBinartBeforeFix = false via disableBinaryBeforeFix() to block binary commands before a fix is
+// achieved
+void UM980::enableBinaryBeforeFix()
+{
+    startBinaryBeforeFix = true;
+}
+void UM980::disableBinaryBeforeFix()
+{
+    startBinaryBeforeFix = false;
 }
