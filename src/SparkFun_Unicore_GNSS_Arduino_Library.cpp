@@ -1714,10 +1714,10 @@ char *UM980::getVersionFull(uint16_t maxWaitMs)
     return ((char *)"Error2");
 }
 
-// Returns true when GNGGA NMEA reports position status >= 2
+// Returns true when GNGGA NMEA reports position status >= 1
 bool UM980::isNmeaFixed()
 {
-    if (nmeaPositionStatus >= 2)
+    if (nmeaPositionStatus >= 1)
         return (true);
     return (false);
 }
@@ -1733,4 +1733,5 @@ void UM980::enableBinaryBeforeFix()
 void UM980::disableBinaryBeforeFix()
 {
     startBinaryBeforeFix = false;
+    Serial.println("\r\n Setting sbbf to false\r\n");
 }

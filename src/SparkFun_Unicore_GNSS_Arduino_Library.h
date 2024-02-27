@@ -137,7 +137,7 @@ class UM980
     unsigned long lastUpdateDateTime = 0;
     unsigned long lastUpdateVersion = 0;
 
-    bool isNmeaFixed(); // Returns true when GNGGA NMEA reports position status >= 2
+    bool isNmeaFixed(); // Returns true when GNGGA NMEA reports position status >= 1
 
     void stopAutoReports(); // Delete all pointers to force reinit next time a helper function is called
 
