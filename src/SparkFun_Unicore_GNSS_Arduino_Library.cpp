@@ -1222,12 +1222,8 @@ void UM980::unicoreHandler(uint8_t *response, uint16_t length)
                 while (pt != NULL)
                 {
                     int spotValue = atoi(pt);
-                    // Serial.printf("counter: %d spot: %s spotvalue: %d\r\n", counter, pt, spotValue);
                     if (counter++ == 6)
-                    {
                         nmeaPositionStatus = spotValue;
-                        debugPrintf("nmeaPositionStatus: %d\r\n", nmeaPositionStatus);
-                    }
                     pt = strtok(NULL, ",");
                 }
             }
@@ -1298,13 +1294,6 @@ bool UM980::initBestnav(uint8_t rate)
     {
         debugPrintf("Unicore Lib: BestNav no fix");
         return (false);
-    }
-    else
-    {
-        if (startBinaryBeforeFix == true)
-            Serial.println("startBinaryBeforeFix is true");
-        if (isNmeaFixed() == true)
-            Serial.println("isNmeaFixed() is true");
     }
 
     packetBESTNAV = new UNICORE_BESTNAV_t; // Allocate RAM for the main struct
@@ -1441,7 +1430,7 @@ bool UM980::initRectime(uint8_t rate)
 
     debugPrintf("RecTimeB started");
 
-    unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+    unicoreLibrarySemaphoreBlock = true; // Allow external tasks to control serial hardware
 
     // Wait until first report is available
     lastUpdateDateTime = 0;
@@ -1733,5 +1722,4 @@ void UM980::enableBinaryBeforeFix()
 void UM980::disableBinaryBeforeFix()
 {
     startBinaryBeforeFix = false;
-    Serial.println("\r\n Setting sbbf to false\r\n");
 }
