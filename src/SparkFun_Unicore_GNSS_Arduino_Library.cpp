@@ -1266,6 +1266,8 @@ bool UM980::initVersion()
 
     debugPrintf("VERSION started");
 
+    unicoreLibrarySemaphoreBlock = true; // Prevent external tasks from harvesting serial data
+
     // Wait until response is received
     lastUpdateVersion = 0;
     uint16_t maxWait = 1000; // Wait for one response to come in
@@ -1280,10 +1282,12 @@ bool UM980::initVersion()
             debugPrintf("GNSS: Failed to get response from VERSION start");
             delete packetVERSION;
             packetVERSION = nullptr;
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
             return (false);
         }
     }
 
+    unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
     return (true);
 }
 
@@ -1297,10 +1301,10 @@ bool UM980::initBestnav(uint8_t rate)
     }
     else
     {
-        if(startBinaryBeforeFix == true)
+        if (startBinaryBeforeFix == true)
             Serial.println("startBinaryBeforeFix is true");
-            if(isNmeaFixed() == true)
-                Serial.println("isNmeaFixed() is true");
+        if (isNmeaFixed() == true)
+            Serial.println("isNmeaFixed() is true");
     }
 
     packetBESTNAV = new UNICORE_BESTNAV_t; // Allocate RAM for the main struct
@@ -1324,6 +1328,8 @@ bool UM980::initBestnav(uint8_t rate)
 
     debugPrintf("BestNav started");
 
+    unicoreLibrarySemaphoreBlock = true; // Prevent external tasks from harvesting serial data
+
     // Wait until first report is available
     lastUpdateGeodetic = 0;
     uint16_t maxWait = (1000 / rate) + 100; // Wait for one response to come in
@@ -1338,10 +1344,12 @@ bool UM980::initBestnav(uint8_t rate)
             debugPrintf("GNSS: Failed to get response from BestNav start");
             delete packetBESTNAV;
             packetBESTNAV = nullptr;
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
             return (false);
         }
     }
 
+    unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
     return (true);
 }
 
@@ -1375,6 +1383,8 @@ bool UM980::initBestnavXyz(uint8_t rate)
 
     debugPrintf("BestNavXYZB started");
 
+    unicoreLibrarySemaphoreBlock = true; // Prevent external tasks from harvesting serial data
+
     // Wait until first report is available
     lastUpdateEcef = 0;
     uint16_t maxWait = (1000 / rate) + 100; // Wait for one response to come in
@@ -1389,9 +1399,12 @@ bool UM980::initBestnavXyz(uint8_t rate)
             debugPrintf("GNSS: Failed to get response from BestNavXyz start");
             delete packetBESTNAVXYZ;
             packetBESTNAVXYZ = nullptr;
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
             return (false);
         }
     }
+
+    unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
 
     return (true);
 }
@@ -1428,6 +1441,8 @@ bool UM980::initRectime(uint8_t rate)
 
     debugPrintf("RecTimeB started");
 
+    unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+
     // Wait until first report is available
     lastUpdateDateTime = 0;
     uint16_t maxWait = (1000 / rate) + 100; // Wait for one response to come in
@@ -1442,9 +1457,12 @@ bool UM980::initRectime(uint8_t rate)
             debugPrintf("GNSS: Failed to get response from RecTime start");
             delete packetRECTIME;
             packetRECTIME = nullptr;
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
             return (false);
         }
     }
+
+    unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
 
     return (true);
 }
