@@ -188,7 +188,7 @@ class UM980
 
     void dumpBuffer(const uint8_t *buffer, uint16_t length);
 
-    char commandName[20] = "";                 // Passes the command type into parser
+    char commandName[40] = "";                 // Passes the command type into parser - MODE ROVER AUTOMOTIVE
     uint8_t commandResponse = UM980_RESULT_OK; // Gets EOM result from parser
 
     // Mode
