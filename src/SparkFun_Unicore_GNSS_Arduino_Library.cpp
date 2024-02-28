@@ -308,7 +308,7 @@ void UM980::enablePrintParserTransitions()
 bool UM980::updateOnce()
 {
     const char *endName;
-    const char *startName;
+    const char *startName = nullptr;
     SEMP_PARSE_ROUTINE startState;
 
     if (serialAvailable())
@@ -337,6 +337,9 @@ bool UM980::updateOnce()
         }
         return (true);
     }
+
+    (void)startState; // Fix pesky warning-as-error
+
     return (false);
 }
 
@@ -359,7 +362,7 @@ void UM980::dumpBuffer(const uint8_t *buffer, uint16_t length)
             bytes = 16 - (offset & 0xf);
 
         // Display the offset
-        sprintf(line, "0x%08lx: ", offset);
+        sprintf(line, "0x%08lx: ", (long unsigned int)offset);
 
         // Skip leading bytes
         for (index = 0; index < (offset & 0xf); index++)
