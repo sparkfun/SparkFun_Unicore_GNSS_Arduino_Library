@@ -1145,7 +1145,6 @@ void UM980::unicoreHandler(uint8_t *response, uint16_t length)
         memcpy(&extSolStat, &data[offsetBestnavExtSolStat], sizeof(uint8_t));
         packetBESTNAV->data.rtkSolution = extSolStat & 0x01;                   // 0 = unchecked, 1 = checked
         packetBESTNAV->data.pseudorangeCorrection = (extSolStat >> 1) & 0b111; // Limit to three bits
-        debugPrintf("BestNav Handler 2");
     }
     else if (messageID == messageIdRectime)
     {
