@@ -15,6 +15,7 @@ Um980Result	KEYWORD1
 
 begin	KEYWORD2
 isConnected	KEYWORD2
+isBlocking	KEYWORD2
 enableDebugging	KEYWORD2
 disableDebugging	KEYWORD2
 
@@ -109,6 +110,9 @@ getID	KEYWORD2
 getVersion	KEYWORD2
 getCompileTime	KEYWORD2
 getVersionFull	KEYWORD2
+
+enableBinaryBeforeFix	KEYWORD2
+disableBinaryBeforeFix	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
