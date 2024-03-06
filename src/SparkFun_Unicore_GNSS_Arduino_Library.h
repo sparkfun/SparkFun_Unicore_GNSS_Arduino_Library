@@ -48,81 +48,81 @@ typedef enum
     UM980_RESULT_RESPONSE_COMMAND_WAITING,
 } Um980Result;
 
-#define um980BinarySyncA    ((uint8_t)0xAA)
-#define um980BinarySyncB    ((uint8_t)0x44)
-#define um980BinarySyncC    ((uint8_t)0xB5)
-#define um980ASCIISyncEnd   ((uint8_t)'\n')
+#define um980BinarySyncA ((uint8_t)0xAA)
+#define um980BinarySyncB ((uint8_t)0x44)
+#define um980BinarySyncC ((uint8_t)0xB5)
+#define um980ASCIISyncEnd ((uint8_t)'\n')
 
-#define um980HeaderLength           ((uint16_t)24)
-#define offsetHeaderSyncA           ((uint16_t)0)
-#define offsetHeaderSyncB           ((uint16_t)1)
-#define offsetHeaderSyncC           ((uint16_t)2)
-#define offsetHeaderCpuIdle         ((uint16_t)3)
-#define offsetHeaderMessageId       ((uint16_t)4)
-#define offsetHeaderMessageLength   ((uint16_t)6)
-#define offsetHeaderReferenceTime   ((uint16_t)8)
-#define offsetHeaderTimeStatus      ((uint16_t)9)
-#define offsetHeaderWeekNumber      ((uint16_t)10)
-#define offsetHeaderSecondsOfWeek   ((uint16_t)12)
-#define offsetHeaderReleaseVersion  ((uint16_t)20)
-#define offsetHeaderLeapSecond      ((uint16_t)21)
-#define offsetHeaderOutputDelay     ((uint16_t)22)
+#define um980HeaderLength ((uint16_t)24)
+#define offsetHeaderSyncA ((uint16_t)0)
+#define offsetHeaderSyncB ((uint16_t)1)
+#define offsetHeaderSyncC ((uint16_t)2)
+#define offsetHeaderCpuIdle ((uint16_t)3)
+#define offsetHeaderMessageId ((uint16_t)4)
+#define offsetHeaderMessageLength ((uint16_t)6)
+#define offsetHeaderReferenceTime ((uint16_t)8)
+#define offsetHeaderTimeStatus ((uint16_t)9)
+#define offsetHeaderWeekNumber ((uint16_t)10)
+#define offsetHeaderSecondsOfWeek ((uint16_t)12)
+#define offsetHeaderReleaseVersion ((uint16_t)20)
+#define offsetHeaderLeapSecond ((uint16_t)21)
+#define offsetHeaderOutputDelay ((uint16_t)22)
 
 // VERSIONB
-#define messageIdVersion             ((uint16_t)37)
-#define offsetVersionModuleType      ((uint16_t)0)
+#define messageIdVersion ((uint16_t)37)
+#define offsetVersionModuleType ((uint16_t)0)
 #define offsetVersionFirmwareVersion ((uint16_t)4)
-#define offsetVersionAuth            ((uint16_t)37)
-#define offsetVersionPsn             ((uint16_t)166)
-#define offsetVersionEfuseID         ((uint16_t)232)
-#define offsetVersionCompTime        ((uint16_t)265)
+#define offsetVersionAuth ((uint16_t)37)
+#define offsetVersionPsn ((uint16_t)166)
+#define offsetVersionEfuseID ((uint16_t)232)
+#define offsetVersionCompTime ((uint16_t)265)
 
 // BESTNAVB contains HPA, sats tracked/used, lat/long, RTK status, fix status
-#define messageIdBestnav            ((uint16_t)2118)
-#define offsetBestnavPsolStatus     ((uint16_t)0)
-#define offsetBestnavPosType        ((uint16_t)4)
-#define offsetBestnavLat            ((uint16_t)8)
-#define offsetBestnavLon            ((uint16_t)16)
-#define offsetBestnavHgt            ((uint16_t)24)
-#define offsetBestnavLatDeviation   ((uint16_t)40)
-#define offsetBestnavLonDeviation   ((uint16_t)44)
-#define offsetBestnavHgtDeviation   ((uint16_t)48)
-#define offsetBestnavSatsTracked    ((uint16_t)64)
-#define offsetBestnavSatsUsed       ((uint16_t)65)
-#define offsetBestnavExtSolStat     ((uint16_t)69)
-#define offsetBestnavVelType        ((uint16_t)76)
-#define offsetBestnavHorSpd         ((uint16_t)88)
-#define offsetBestnavTrkGnd         ((uint16_t)96)
-#define offsetBestnavVertSpd        ((uint16_t)104)
-#define offsetBestnavVerspdStd      ((uint16_t)112)
-#define offsetBestnavHorspdStd      ((uint16_t)116)
+#define messageIdBestnav ((uint16_t)2118)
+#define offsetBestnavPsolStatus ((uint16_t)0)
+#define offsetBestnavPosType ((uint16_t)4)
+#define offsetBestnavLat ((uint16_t)8)
+#define offsetBestnavLon ((uint16_t)16)
+#define offsetBestnavHgt ((uint16_t)24)
+#define offsetBestnavLatDeviation ((uint16_t)40)
+#define offsetBestnavLonDeviation ((uint16_t)44)
+#define offsetBestnavHgtDeviation ((uint16_t)48)
+#define offsetBestnavSatsTracked ((uint16_t)64)
+#define offsetBestnavSatsUsed ((uint16_t)65)
+#define offsetBestnavExtSolStat ((uint16_t)69)
+#define offsetBestnavVelType ((uint16_t)76)
+#define offsetBestnavHorSpd ((uint16_t)88)
+#define offsetBestnavTrkGnd ((uint16_t)96)
+#define offsetBestnavVertSpd ((uint16_t)104)
+#define offsetBestnavVerspdStd ((uint16_t)112)
+#define offsetBestnavHorspdStd ((uint16_t)116)
 
 // BESTNAVXYZB
-#define messageIdBestnavXyz         ((uint16_t)240)
-#define offsetBestnavXyzPsolStatus  ((uint16_t)0)
-#define offsetBestnavXyzPosType     ((uint16_t)4)
-#define offsetBestnavXyzPX          ((uint16_t)8)
-#define offsetBestnavXyzPY          ((uint16_t)16)
-#define offsetBestnavXyzPZ          ((uint16_t)24)
+#define messageIdBestnavXyz ((uint16_t)240)
+#define offsetBestnavXyzPsolStatus ((uint16_t)0)
+#define offsetBestnavXyzPosType ((uint16_t)4)
+#define offsetBestnavXyzPX ((uint16_t)8)
+#define offsetBestnavXyzPY ((uint16_t)16)
+#define offsetBestnavXyzPZ ((uint16_t)24)
 #define offsetBestnavXyzPXDeviation ((uint16_t)32)
 #define offsetBestnavXyzPYDeviation ((uint16_t)36)
 #define offsetBestnavXyzPZDeviation ((uint16_t)40)
 #define offsetBestnavXyzSatsTracked ((uint16_t)104)
-#define offsetBestnavXyzSatsUsed    ((uint16_t)105)
-#define offsetBestnavXyzExtSolStat  ((uint16_t)109)
+#define offsetBestnavXyzSatsUsed ((uint16_t)105)
+#define offsetBestnavXyzExtSolStat ((uint16_t)109)
 
 // RECTIMEB for time/date
-#define messageIdRectime            ((uint16_t)102)
-#define offsetRectimeClockStatus    ((uint16_t)0)
-#define offsetRectimeOffset         ((uint16_t)4)
-#define offsetRectimeOffsetStd      ((uint16_t)12)
-#define offsetRectimeUtcYear        ((uint16_t)28)
-#define offsetRectimeUtcMonth       ((uint16_t)32)
-#define offsetRectimeUtcDay         ((uint16_t)33)
-#define offsetRectimeUtcHour        ((uint16_t)34)
-#define offsetRectimeUtcMinute      ((uint16_t)35)
+#define messageIdRectime ((uint16_t)102)
+#define offsetRectimeClockStatus ((uint16_t)0)
+#define offsetRectimeOffset ((uint16_t)4)
+#define offsetRectimeOffsetStd ((uint16_t)12)
+#define offsetRectimeUtcYear ((uint16_t)28)
+#define offsetRectimeUtcMonth ((uint16_t)32)
+#define offsetRectimeUtcDay ((uint16_t)33)
+#define offsetRectimeUtcHour ((uint16_t)34)
+#define offsetRectimeUtcMinute ((uint16_t)35)
 #define offsetRectimeUtcMillisecond ((uint16_t)36)
-#define offsetRectimeUtcStatus      ((uint16_t)40)
+#define offsetRectimeUtcStatus ((uint16_t)40)
 
 // HWSTATUS has temperature info, and voltage info
 
@@ -137,8 +137,8 @@ class UM980
     unsigned long lastUpdateDateTime = 0;
     unsigned long lastUpdateVersion = 0;
 
-    bool staleDateTime();
-    bool staleEcef();
+    bool isNmeaFixed(); // Returns true when GNGGA NMEA reports position status >= 1
+
     void stopAutoReports(); // Delete all pointers to force reinit next time a helper function is called
 
     Um980Result getGeodetic(uint16_t maxWaitMs = 1500);
@@ -149,17 +149,28 @@ class UM980
 
     SEMP_PARSE_STATE *_sempParse; // State of the SparkFun Extensible Message Parser
 
+    bool unicoreLibrarySemaphoreBlock = false; // Gets set to true when the Unicore library needs to interact directly with the
+                                       // serial hardware
+
   protected:
     HardwareSerial *_hwSerialPort = nullptr;
 
   public:
-    bool _printBadChecksum = false; // Display bad checksum message from the parser
+    bool _printBadChecksum = false;       // Display bad checksum message from the parser
     bool _printParserTransitions = false; // Display the parser transitions
-    bool _printRxMessages = false; // Display the received message summary
-    bool _dumpRxMessages = false; // Display the received message hex dump
+    bool _printRxMessages = false;        // Display the received message summary
+    bool _dumpRxMessages = false;         // Display the received message hex dump
+
+    uint8_t nmeaPositionStatus = 0; // Position psition status obtained from GNGGA NMEA
+
+    // By default, library will attempt to start RECTIME and BESTNAV regardless of GNSS fix.
+    // This may lead to command timeouts as the UM980 does not appear to respond to BESTNAVB commands if 3D fix is not achieved.
+    // Set startBinartBeforeFix = false via disableBinaryBeforeFix() to block binary commands before a fix is achieved
+    bool startBinaryBeforeFix = true; 
 
     bool begin(HardwareSerial &serialPort, Print *parserDebug = nullptr, Print *parserError = &Serial);
     bool isConnected();
+    bool isBlocking();
     bool update();
     bool updateOnce();
 
@@ -171,6 +182,9 @@ class UM980
     void disableParserDebug();
     void enableParserErrors(Print *print = &Serial);
     void disableParserErrors();
+
+    void enableBinaryBeforeFix();
+    void disableBinaryBeforeFix();
 
     void enablePrintBadChecksums();
     void disablePrintBadChecksums();
@@ -184,7 +198,7 @@ class UM980
 
     void dumpBuffer(const uint8_t *buffer, uint16_t length);
 
-    char commandName[20] = "";                 // Passes the command type into parser
+    char commandName[40] = "";                 // Passes the command type into parser - MODE ROVER AUTOMOTIVE
     uint8_t commandResponse = UM980_RESULT_OK; // Gets EOM result from parser
 
     // Mode
