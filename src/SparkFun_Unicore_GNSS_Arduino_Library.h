@@ -198,7 +198,7 @@ class UM980
 
     void dumpBuffer(const uint8_t *buffer, uint16_t length);
 
-    char commandName[40] = "";                 // Passes the command type into parser - MODE ROVER AUTOMOTIVE
+    char commandName[50] = "";                 // Passes the command type into parser - CONFIG PPS ENABLE GPS POSITIVE 200000 1000 0 0
     uint8_t commandResponse = UM980_RESULT_OK; // Gets EOM result from parser
 
     // Mode
