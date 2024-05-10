@@ -46,6 +46,8 @@ typedef enum
     UM980_RESULT_RESPONSE_COMMAND_OK,
     UM980_RESULT_RESPONSE_COMMAND_ERROR,
     UM980_RESULT_RESPONSE_COMMAND_WAITING,
+    UM980_RESULT_RESPONSE_COMMAND_CONFIG,
+    UM980_RESULT_CONFIG_PRESENT,
 } Um980Result;
 
 #define um980BinarySyncA ((uint8_t)0xAA)
@@ -149,8 +151,10 @@ class UM980
 
     SEMP_PARSE_STATE *_sempParse; // State of the SparkFun Extensible Message Parser
 
-    bool unicoreLibrarySemaphoreBlock = false; // Gets set to true when the Unicore library needs to interact directly with the
-                                       // serial hardware
+    bool unicoreLibrarySemaphoreBlock = false; // Gets set to true when the Unicore library needs to interact directly
+                                               // with the serial hardware
+    char configStringToFind[100] = {'\0'};
+    bool configStringFound = false; // configHandler() sets true if we find the intended string
 
   protected:
     HardwareSerial *_hwSerialPort = nullptr;
@@ -164,9 +168,10 @@ class UM980
     uint8_t nmeaPositionStatus = 0; // Position psition status obtained from GNGGA NMEA
 
     // By default, library will attempt to start RECTIME and BESTNAV regardless of GNSS fix.
-    // This may lead to command timeouts as the UM980 does not appear to respond to BESTNAVB commands if 3D fix is not achieved.
-    // Set startBinartBeforeFix = false via disableBinaryBeforeFix() to block binary commands before a fix is achieved
-    bool startBinaryBeforeFix = true; 
+    // This may lead to command timeouts as the UM980 does not appear to respond to BESTNAVB commands if 3D fix is not
+    // achieved. Set startBinartBeforeFix = false via disableBinaryBeforeFix() to block binary commands before a fix is
+    // achieved
+    bool startBinaryBeforeFix = true;
 
     bool begin(HardwareSerial &serialPort, Print *parserDebug = nullptr, Print *parserError = &Serial);
     bool isConnected();
@@ -198,7 +203,7 @@ class UM980
 
     void dumpBuffer(const uint8_t *buffer, uint16_t length);
 
-    char commandName[50] = "";                 // Passes the command type into parser - CONFIG PPS ENABLE GPS POSITIVE 200000 1000 0 0
+    char commandName[50] = ""; // Passes the command type into parser - CONFIG PPS ENABLE GPS POSITIVE 200000 1000 0 0
     uint8_t commandResponse = UM980_RESULT_OK; // Gets EOM result from parser
 
     // Mode
@@ -307,7 +312,12 @@ class UM980
 
     char *getVersionFull(uint16_t maxWaitMs = 1500);
 
+    // Limit maxWaitMs for CONFIG interactions. 800ms good. 500ms too short.
+    // because we rely on response timeout - there is no known end to the CONFIG response
+    bool isConfigurationPresent(const char *configStringToFind, uint16_t maxWaitMs = 800);
+
     void unicoreHandler(uint8_t *data, uint16_t length);
+    void configHandler(uint8_t *response, uint16_t length);
 
     bool initBestnav(uint8_t rate = 1);
     UNICORE_BESTNAV_t *packetBESTNAV = nullptr;

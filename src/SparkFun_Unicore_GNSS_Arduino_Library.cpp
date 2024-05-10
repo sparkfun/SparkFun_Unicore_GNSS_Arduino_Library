@@ -15,64 +15,6 @@
   Lesser General Public License for more details.
 */
 
-/*
-  We use a simple ASCII interface to the UM980.
-  + signifies it is TODO
-
-  Configuration Commands
-    Mode
-      Base Fixed
-      Base Average
-      Rover
-    Config
-      Serial ports
-      PPS
-      +RTCM - See Appendix 2
-      +UNDULATION
-      +DGPS
-      +RTK
-      +STANDALONE
-      +HEADING
-      +SBAS
-      +EVENT
-      +SMOOTH
-      +MMP
-      +NMEA Version
-      ...
-    Mask
-      Mask
-       Elevation
-       Frequency
-      Unmask
-    +Assisted position and time
-    Data output
-      NMEA (Defaults to NMEA)
-        GPDTM
-        GPGBS
-        GPGGA
-        GPGLL
-        GPGNS
-        GPGRS
-        GPGSA
-        GPGST
-        GPGSV
-        GPTHS
-        GPRMC
-        GPROT
-        GPVTG
-        GPZDA
-      +Unicore special
-    Other
-      Unlog
-      FReset
-      Reset
-      SaveConfig
-      Version
-
-  Data Query Commands
-
-*/
-
 #include "SparkFun_Unicore_GNSS_Arduino_Library.h"
 #include "Arduino.h"
 
@@ -315,6 +257,7 @@ void UM980::enablePrintParserTransitions()
 
 // Checks for new data once
 // Used during sendString and sendQuery
+// um980ProcessMessage() is called once the parser completes on a line
 bool UM980::updateOnce()
 {
     const char *endName;
@@ -524,6 +467,15 @@ void um980ProcessMessage(SEMP_PARSE_STATE *parse, uint16_t type)
                 {
                     ptrUM980->debugPrintf("Unicore Lib: Error response: %s", parse->buffer);
                     ptrUM980->commandResponse = UM980_RESULT_RESPONSE_COMMAND_ERROR;
+                    return;
+                }
+
+                responsePointer = strcasestr((char *)parse->buffer, "CONFIG");
+                if (responsePointer != nullptr) // Found
+                {
+                    ptrUM980->debugPrintf("CONFIG response: %s", parse->buffer);
+                    ptrUM980->configHandler(parse->buffer, parse->length);
+                    ptrUM980->commandResponse = UM980_RESULT_RESPONSE_COMMAND_CONFIG;
                     return;
                 }
             }
@@ -1694,6 +1646,100 @@ char *UM980::getVersionFull(uint16_t maxWaitMs)
     else if (result == UM980_RESULT_RESPONSE_COMMAND_ERROR)
         return ((char *)"Error1");
     return ((char *)"Error2");
+}
+
+// Cracks a given CONFIG response into settings
+void UM980::configHandler(uint8_t *response, uint16_t length)
+{
+    // We've received a response such as $CONFIG,COM3,CONFIG COM3 115200*23
+    // See if it is the one we want
+    char *responsePointer = strcasestr((char *)response, configStringToFind);
+    if (responsePointer != nullptr) // Found
+    {
+        configStringFound = true;
+    }
+    else
+    {
+        // This config response was not what we were looking for
+    }
+}
+
+// Given a string such as "CONFIG COM3 115200", query the device's config settings
+// If the given string is in the CONFIG response, return true
+// Send a CONFIG command and see if a specific string exists in the responses
+// $command,config,response: OK*54
+// $CONFIG,ANTENNA,CONFIG ANTENNA POWERON*7A
+// $CONFIG,NMEAVERSION,CONFIG NMEAVERSION V410*47
+// $CONFIG,RTK,CONFIG RTK TIMEOUT 120*6C
+// $CONFIG,RTK,CONFIG RTK RELIABILITY 3 1*76
+// $CONFIG,PPP,CONFIG PPP TIMEOUT 120*6C
+// $CONFIG,DGPS,CONFIG DGPS TIMEOUT 300*6C
+// $CONFIG,RTCMB1CB2A,CONFIG RTCMB1CB2A ENABLE*25
+// $CONFIG,ANTENNADELTAHEN,CONFIG ANTENNADELTAHEN 0.0000 0.0000 0.0000*3A
+// $CONFIG,PPS,CONFIG PPS ENABLE GPS POSITIVE 500000 1000 0 0*6E
+// $CONFIG,SIGNALGROUP,CONFIG SIGNALGROUP 2*16
+// $CONFIG,ANTIJAM,CONFIG ANTIJAM AUTO*2B
+// $CONFIG,AGNSS,CONFIG AGNSS DISABLE*70
+// $CONFIG,BASEOBSFILTER,CONFIG BASEOBSFILTER DISABLE*70
+// $CONFIG,COM1,CONFIG COM1 115200*23
+// $CONFIG,COM2,CONFIG COM2 115200*23
+// $CONFIG,COM3,CONFIG COM3 115200*23
+bool UM980::isConfigurationPresent(const char *stringToFind, uint16_t maxWaitMs)
+{
+    Um980Result result;
+
+    clearBuffer();
+
+    // Send command and check for OK response
+    result = sendString("CONFIG", maxWaitMs);
+    if (result != UM980_RESULT_OK)
+        // return (result);
+        return (false);
+
+    // Setup configStringToFind so configHandler() knows what to look for
+    strncpy(configStringToFind, stringToFind, sizeof(configStringToFind));
+
+    configStringFound = false; // configHandler() sets true if we find the intended string
+
+    commandResponse = UM980_RESULT_RESPONSE_COMMAND_WAITING; // Reset
+
+    unicoreLibrarySemaphoreBlock = true; // Prevent external tasks from harvesting serial data
+
+    // Feed the parser until we see a response to the command
+    int wait = 0;
+    while (1)
+    {
+        if (wait++ == maxWaitMs)
+        {
+            debugPrintf("Unicore Lib: Response timeout");
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+            // return (UM980_RESULT_TIMEOUT_RESPONSE);
+            return (false);
+        }
+
+        updateOnce(); // Will call um980ProcessMessage() and configHandler()
+
+        if (configStringFound == true)
+        {
+            // return (UM980_RESULT_CONFIG_PRESENT);
+            return (true);
+        }
+
+        if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_ERROR)
+        {
+            debugPrintf("Unicore Lib: Query failure");
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+            // return (UM980_RESULT_RESPONSE_COMMAND_ERROR);
+            return (false);
+        }
+
+        delay(1);
+    }
+
+    unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+
+    // return (UM980_RESULT_OK);
+    return (false);
 }
 
 // Returns true when GNGGA NMEA reports position status >= 1
