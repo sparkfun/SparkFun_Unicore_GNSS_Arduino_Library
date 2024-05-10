@@ -131,6 +131,8 @@ void loop()
     else if (positionType == 48) Serial.print("L1 fixed solution");
     else if (positionType == 49) Serial.print("Wide-lane fixed solution");
     else if (positionType == 50) Serial.print("Narrow-lane fixed solution");
+    else if (positionType == 68) Serial.print("PPP solution converging");
+    else if (positionType == 69) Serial.print("Precise Point Positioning");
     else Serial.print("Unknown");
     Serial.println();
 
