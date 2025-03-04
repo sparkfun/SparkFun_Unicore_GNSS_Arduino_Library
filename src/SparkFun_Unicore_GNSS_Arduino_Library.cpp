@@ -601,7 +601,7 @@ bool UM980::enablePPS(uint32_t widthMicroseconds, uint16_t periodMilliseconds, b
         strncpy(polarity, "NEGATIVE", sizeof(polarity));
 
     char command[50];
-    snprintf(command, sizeof(command), "ENABLE GPS %s %d %d %d %d", polarity, widthMicroseconds, periodMilliseconds,
+    snprintf(command, sizeof(command), "ENABLE GPS %s %ld %d %d %d", polarity, widthMicroseconds, periodMilliseconds,
              rfDelay, userDelay);
 
     return (configurePPS(command));
