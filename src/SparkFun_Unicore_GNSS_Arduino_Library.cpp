@@ -189,24 +189,6 @@ bool UM980::isConnected()
 {
     for (int x = 0; x < 3; x++)
     {
-        disableOutput(); // Tell unit to stop transmitting
-
-        // Wait until serial stops coming in
-        uint16_t maxTime = 500;
-        unsigned long startTime = millis();
-        while (1)
-        {
-            delay(50);
-
-            if (serialAvailable() == 0)
-                break;
-            while (serialAvailable())
-                serialRead();
-
-            if (millis() - startTime > maxTime)
-                return (false);
-        }
-
         if (sendQuery("MODE") == UM980_RESULT_OK)
             return (true);
         debugPrintf("UM980 failed to connect. Trying again.");
