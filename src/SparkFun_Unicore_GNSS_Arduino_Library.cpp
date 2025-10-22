@@ -582,6 +582,63 @@ bool UM980::setPortBaudrate(const char *comName, unsigned long newBaud)
     return (sendCommand(command));
 }
 
+// Given a port number, return the baud rate it is operating at
+long UM980::getPortBaudrate(const char *comName, uint16_t maxWaitMs)
+{
+    // The library can't read specific settings but we can see if a specific setting
+    // is present in the response to the CONFIG command
+
+    Um980Result result;
+
+    clearBuffer();
+
+    // Send command and check for OK response
+    result = sendString("CONFIG", maxWaitMs);
+    if (result != UM980_RESULT_OK)
+        return (-2);
+
+    // Setup configStringToFind so configHandler() knows what to look for
+    // $CONFIG,COM3,CONFIG COM3 115200*23 is an example response
+    // So we look for "CONFIG COMx"
+    snprintf(configStringToFind, sizeof(configStringToFind), "CONFIG %s", comName);
+
+    configStringFound = false; // configHandler() sets true if we find the intended string
+
+    commandResponse = UM980_RESULT_RESPONSE_COMMAND_WAITING; // Reset
+
+    unicoreLibrarySemaphoreBlock = true; // Prevent external tasks from harvesting serial data
+
+    // Feed the parser until we see a response to the command
+    int wait = 0;
+    while (1)
+    {
+        if (wait++ == maxWaitMs)
+        {
+            debugPrintf("Unicore Lib: Response timeout");
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+            return (-1);
+        }
+
+        updateOnce(); // Will call um980ProcessMessage() and configHandler()
+
+        if (configStringFound == true)
+            return (configLong);
+
+        if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_ERROR)
+        {
+            debugPrintf("Unicore Lib: Query failure");
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+            return (-2);
+        }
+
+        delay(1);
+    }
+
+    unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+
+    return (-3); // Uncaught error
+}
+
 // Sets the baud rate of the port we are communicating on
 // Supported baud rates: 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600
 bool UM980::setBaudrate(unsigned long newBaud)
@@ -626,7 +683,7 @@ bool UM980::configurePPS(const char *configString)
 
 // Available constellations: GPS, BDS, GLO, GAL, QZSS, IRNSS
 
-// Enable a given constallation
+// Enable a given constellation
 // Returns true if successful
 bool UM980::enableConstellation(const char *constellationName)
 {
@@ -659,6 +716,64 @@ bool UM980::setElevationAngle(int16_t elevationDegrees)
     snprintf(command, sizeof(command), "%d", elevationDegrees);
 
     return (disableSystem(command)); // Use MASK to set elevation angle
+}
+
+// Return the elevation mask in degrees
+// $CONFIG,MASK,MASK 5.0*25
+float UM980::getElevationAngle(uint16_t maxWaitMs)
+{
+    // The library can't read specific settings but we can see if a specific setting
+    // is present in the response to the MASK command
+
+    Um980Result result;
+
+    clearBuffer();
+
+    // Send command and check for OK response
+    result = sendString("MASK", maxWaitMs);
+    if (result != UM980_RESULT_OK)
+        return (-2);
+
+    // Setup configStringToFind so configHandler() knows what to look for
+    // $CONFIG,MASK,MASK 5.0*25 is an example response
+    // So we look for "MASK,MASK"
+    snprintf(configStringToFind, sizeof(configStringToFind), "MASK,MASK");
+
+    configStringFound = false; // configHandler() sets true if we find the intended string
+
+    commandResponse = UM980_RESULT_RESPONSE_COMMAND_WAITING; // Reset
+
+    unicoreLibrarySemaphoreBlock = true; // Prevent external tasks from harvesting serial data
+
+    // Feed the parser until we see a response to the command
+    int wait = 0;
+    while (1)
+    {
+        if (wait++ == maxWaitMs)
+        {
+            debugPrintf("Unicore Lib: Response timeout");
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+            return (-1);
+        }
+
+        updateOnce(); // Will call um980ProcessMessage() and configHandler()
+
+        if (configStringFound == true)
+            return (configFloat);
+
+        if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_ERROR)
+        {
+            debugPrintf("Unicore Lib: Query failure");
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+            return (-2);
+        }
+
+        delay(1);
+    }
+
+    unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+
+    return (-3); // Uncaught error
 }
 
 // Ignore satellites below certain CN0 value
@@ -913,7 +1028,7 @@ void UM980::serialPrintln(const char *command)
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 // Send a command string (ie 'MODE ROVER') to the UM980
-// Returns true if device reponded with OK to command
+// Returns true if device responded with OK to command
 bool UM980::sendCommand(const char *command, uint16_t maxWaitMs)
 {
     return (sendString(command, maxWaitMs) == UM980_RESULT_OK);
@@ -926,7 +1041,7 @@ bool UM980::sendCommand(const char *command, uint16_t maxWaitMs)
 // #MODE,97,GPS,FINE,2283,499142000,0,0,18,22;MODE BASE -1280206.5680 -4716804.4030 4086665.4840,*60
 
 //'$' begins the responses to commands, ie 'MODE ROVER', ends with OK
-// Contains reponse for caller
+// Contains response for caller
 Um980Result UM980::sendQuery(const char *command, uint16_t maxWaitMs)
 {
     Um980Result result;
@@ -1630,7 +1745,7 @@ char *UM980::getCompileTime()
 }
 
 // Returns pointer to terminated response.
-//$command,VERSION,response: OK*04
+// $command,VERSION,response: OK*04
 // #VERSION,92,GPS,FINE,2289,167126600,0,0,18,155;UM980,R4.10Build7923,HRPT00-S10C-P,2310415000001-MD22B1224961040,ff3bd496fd7ca68b,2022/09/28*45d62771
 char *UM980::getVersionFull(uint16_t maxWaitMs)
 {
@@ -1657,6 +1772,42 @@ void UM980::configHandler(uint8_t *response, uint16_t length)
     if (responsePointer != nullptr) // Found
     {
         configStringFound = true;
+
+        // Obtain the value following the search string
+        responsePointer += strlen(configStringToFind); // Move the position to the end of the word
+
+        // Skip any whitespace
+        while (*responsePointer && isspace(*responsePointer))
+            responsePointer++;
+
+        // Now 'responsePointer' should point at the start of the next term
+        char *longEndPtr;
+        long longValue = strtol(responsePointer, &longEndPtr, 10); // Convert the next term to long, base 10
+
+        if (responsePointer == longEndPtr)
+        {
+            configLong = 0; // No number found
+            // Serial.println("No value found");
+        }
+        else
+        {
+            configLong = longValue; // Remember the converted value
+            // Serial.printf("Found value: %ld\r\n", configLong);
+        }
+
+        char *floatEndPrt;
+        float floatValue = strtof(responsePointer, &floatEndPrt);
+
+        if (responsePointer == floatEndPrt)
+        {
+            configFloat = 0; // No number found
+            // Serial.println("No value found");
+        }
+        else
+        {
+            configFloat = floatValue; // Remember the converted value
+            // Serial.printf("Found value: %0.2f\r\n", configFloat);
+        }
     }
     else
     {

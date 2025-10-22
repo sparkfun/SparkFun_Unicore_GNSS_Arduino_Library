@@ -47,6 +47,7 @@ typedef enum
     UM980_RESULT_RESPONSE_COMMAND_ERROR,
     UM980_RESULT_RESPONSE_COMMAND_WAITING,
     UM980_RESULT_RESPONSE_COMMAND_CONFIG,
+    UM980_RESULT_RESPONSE_COMMAND_MASK,
     UM980_RESULT_CONFIG_PRESENT,
 } Um980Result;
 
@@ -153,8 +154,10 @@ class UM980
 
     bool unicoreLibrarySemaphoreBlock = false; // Gets set to true when the Unicore library needs to interact directly
                                                // with the serial hardware
-    char configStringToFind[100] = {'\0'};
+    char configStringToFind[50] = {'\0'}; //ie, "COM3 115200"
     bool configStringFound = false; // configHandler() sets true if we find the intended string
+    long configLong = 0; // configHandler() sets value if one is following the search term, ie COM3
+    float configFloat; // configHandler() sets value if one is following the search term, ie 5.00
 
   protected:
     HardwareSerial *_hwSerialPort = nullptr;
@@ -221,6 +224,7 @@ class UM980
 
     // Config
     bool setPortBaudrate(const char *comName, unsigned long newBaud);
+    long getPortBaudrate(const char *comName, uint16_t maxWaitMs = 1500);
     bool setBaudrate(unsigned long newBaud);
     bool enablePPS(uint32_t widthMicroseconds, uint16_t periodMilliseconds, bool positivePolarity = true,
                    int16_t rfDelay = 0, int16_t userDelay = 0);
@@ -232,6 +236,7 @@ class UM980
     bool disableConstellation(const char *constellationName);
     bool setElevationAngle(int16_t elevationDegrees, const char *constellationName);
     bool setElevationAngle(int16_t elevationDegrees);
+    float getElevationAngle(uint16_t maxWaitMs = 1500);
     bool setMinCNO(uint8_t dBHz);
     bool enableFrequency(const char *frequencyName);
     bool disableFrequency(const char *frequencyName);
