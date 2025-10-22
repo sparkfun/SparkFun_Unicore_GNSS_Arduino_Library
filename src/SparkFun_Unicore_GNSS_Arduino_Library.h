@@ -48,8 +48,19 @@ typedef enum
     UM980_RESULT_RESPONSE_COMMAND_WAITING,
     UM980_RESULT_RESPONSE_COMMAND_CONFIG,
     UM980_RESULT_RESPONSE_COMMAND_MASK,
+    UM980_RESULT_RESPONSE_COMMAND_MODE,
     UM980_RESULT_CONFIG_PRESENT,
 } Um980Result;
+
+typedef enum
+{
+    UM980_MODE_UNKNOWN = 0,
+    UM980_MODE_ROVER_SURVEY,     // 1
+    UM980_MODE_ROVER_UAV,        // 2
+    UM980_MODE_ROVER_AUTOMOTIVE, // 3
+    UM980_MODE_BASE_SURVEY_IN,   // 4
+    UM980_MODE_BASE_FIXED,       // 5
+} Um980Mode;
 
 #define um980BinarySyncA ((uint8_t)0xAA)
 #define um980BinarySyncB ((uint8_t)0x44)
@@ -154,10 +165,13 @@ class UM980
 
     bool unicoreLibrarySemaphoreBlock = false; // Gets set to true when the Unicore library needs to interact directly
                                                // with the serial hardware
-    char configStringToFind[50] = {'\0'}; //ie, "COM3 115200"
-    bool configStringFound = false; // configHandler() sets true if we find the intended string
+    char configStringToFind[50] = {'\0'};      // ie, "COM3 115200"
+    bool configStringFound = false;            // configHandler() sets true if we find the intended string
     long configLong = 0; // configHandler() sets value if one is following the search term, ie COM3
-    float configFloat; // configHandler() sets value if one is following the search term, ie 5.00
+    float configFloat;   // configHandler() sets value if one is following the search term, ie 5.00
+
+    bool modeFound = false;            // modeHandler() sets true if we find a valid mode response
+    Um980Mode modeType = UM980_MODE_UNKNOWN; // modeHandler() sets modeType after getMode() is called
 
   protected:
     HardwareSerial *_hwSerialPort = nullptr;
@@ -211,6 +225,7 @@ class UM980
 
     // Mode
     bool setMode(const char *modeType);
+    int8_t getMode(uint16_t maxWaitMs = 1500);
     bool setModeBase(const char *baseType);
     bool setModeBaseGeodetic(double latitude, double longitude, double altitude);
     bool setModeBaseECEF(double coordinateX, double coordinateY, double coordinateZ);
@@ -323,6 +338,7 @@ class UM980
 
     void unicoreHandler(uint8_t *data, uint16_t length);
     void configHandler(uint8_t *response, uint16_t length);
+    void modeHandler(uint8_t *response, uint16_t length);
 
     bool initBestnav(uint8_t rate = 1);
     UNICORE_BESTNAV_t *packetBESTNAV = nullptr;

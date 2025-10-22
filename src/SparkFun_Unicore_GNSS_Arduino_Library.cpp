@@ -420,7 +420,8 @@ void um980ProcessMessage(SEMP_PARSE_STATE *parse, uint16_t type)
         // Does this response contain the command we are looking for?
         if (strcasecmp((char *)scratchPad->unicoreHash.sentenceName, ptrUM980->commandName) == 0) // Found
         {
-            ptrUM980->debugPrintf("Unicore Lib: Query response: %s", parse->buffer);
+            ptrUM980->debugPrintf("Hash response: %s", parse->buffer);
+            ptrUM980->modeHandler(parse->buffer, parse->length);
             ptrUM980->commandResponse = UM980_RESULT_RESPONSE_COMMAND_OK;
         }
         break;
@@ -500,6 +501,67 @@ bool UM980::setMode(const char *modeType)
     snprintf(command, sizeof(command), "MODE %s", modeType);
 
     return (sendCommand(command));
+}
+
+// getMode returns int representing its current mode
+// #MODE,97,GPS,FINE,2389,337235000,0,0,18,969;MODE ROVER SURVEY,*18
+// #MODE,97,GPS,FINE,2389,338172000,0,0,18,968;MODE BASE TIME 60,*72
+// #MODE,97,GPS,FINE,2283,499142000,0,0,18,22;MODE BASE -1280206.5680 -4716804.4030 4086665.4840,*60
+// Unknown = 0
+// SURVEY = 1
+// UAV = 2
+// AUTOMOTIVE = 3
+// BASE with survey time (survey-in) = 4
+// BASE with fixed coordinates = 5
+int8_t UM980::getMode(uint16_t maxWaitMs)
+{
+    Um980Result result;
+
+    clearBuffer();
+
+    // Send command and check for OK response
+    result = sendString("MODE", maxWaitMs);
+    if (result != UM980_RESULT_OK)
+        return (-2);
+
+    commandResponse = UM980_RESULT_RESPONSE_COMMAND_WAITING; // Reset
+
+    modeType = UM980_MODE_UNKNOWN; // Reset
+
+    unicoreLibrarySemaphoreBlock = true; // Prevent external tasks from harvesting serial data
+
+    // Feed the parser until we see a response to the command
+    int wait = 0;
+    while (1)
+    {
+        if (wait++ == maxWaitMs)
+        {
+            debugPrintf("Unicore Lib: Response timeout");
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+            return (-1);
+        }
+
+        updateOnce(); // Will call um980ProcessMessage() and modeHandler()
+
+        if (modeType != UM980_MODE_UNKNOWN)
+        {
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+            return ((int8_t)modeType);
+        }
+
+        if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_ERROR)
+        {
+            debugPrintf("Unicore Lib: Query failure");
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+            return (-2);
+        }
+
+        delay(1);
+    }
+
+    unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
+
+    return (-3); // Uncaught error
 }
 
 // Directly set a base mode: setModeBase("40.09029479 -105.18505761 1560.089")
@@ -1044,6 +1106,8 @@ bool UM980::sendCommand(const char *command, uint16_t maxWaitMs)
 // Looks for a query response ('#')
 // Some commands like MASK or CONFIG have responses that begin with $
 //'#' begins the responses to queries, ie 'MODE', ends with the result (ie MODE ROVER)
+// #MODE,97,GPS,FINE,2389,337235000,0,0,18,969;MODE ROVER SURVEY,*18
+// #MODE,97,GPS,FINE,2389,338172000,0,0,18,968;MODE BASE TIME 60,*72
 // #MODE,97,GPS,FINE,2283,499142000,0,0,18,22;MODE BASE -1280206.5680 -4716804.4030 4086665.4840,*60
 
 //'$' begins the responses to commands, ie 'MODE ROVER', ends with OK
@@ -1767,6 +1831,76 @@ char *UM980::getVersionFull(uint16_t maxWaitMs)
     else if (result == UM980_RESULT_RESPONSE_COMMAND_ERROR)
         return ((char *)"Error1");
     return ((char *)"Error2");
+}
+
+// Cracks a given MODE response into settings
+void UM980::modeHandler(uint8_t *response, uint16_t length)
+{
+    // We've received a response such as #MODE,97,GPS,FINE,2389,338172000,0,0,18,968;MODE BASE TIME 60,*72
+    modeType = UM980_MODE_UNKNOWN;
+
+    // Extract the mode type
+    char *responsePointer = strcasestr((char *)response, ";MODE");
+    if (responsePointer != nullptr) // Found
+    {
+        // Obtain the value following the search string
+        responsePointer += strlen(";MODE"); // Move the position to the end of the word
+
+        // Skip any whitespace
+        while (*responsePointer && isspace(*responsePointer))
+            responsePointer++;
+
+        // Now 'responsePointer' should point at the start of the next term
+
+        char *typePointer = nullptr;
+
+        typePointer = strcasestr(responsePointer, "BASE");
+        if (typePointer != nullptr) // Found
+        {
+            char *baseTypePointer = nullptr;
+            baseTypePointer = strcasestr(typePointer, "TIME");
+            if (baseTypePointer != nullptr) // Found
+            {
+                modeType = UM980_MODE_BASE_SURVEY_IN;
+            }
+            else
+            {
+                // Response contains non-text such as:
+                // #MODE,97,GPS,FINE,2283,499142000,0,0,18,22;MODE BASE -1280206.5680 -4716804.4030 4086665.4840,*60
+                modeType = UM980_MODE_BASE_FIXED;
+            }
+        }
+        else
+        {
+            // Response contains ROVER
+            // #MODE,97,GPS,FINE,2389,337235000,0,0,18,969;MODE ROVER SURVEY,*18
+
+            typePointer = strcasestr(responsePointer, "SURVEY");
+            if (typePointer != nullptr) // Found
+            {
+                modeType = UM980_MODE_ROVER_SURVEY;
+                return;
+            }
+            
+            typePointer = strcasestr(responsePointer, "UAV");
+            if (typePointer != nullptr) // Found
+            {
+                modeType = UM980_MODE_ROVER_UAV;
+                return;
+            }
+
+            typePointer = strcasestr(responsePointer, "AUTOMOTIVE");
+            if (typePointer != nullptr) // Found
+            {
+                modeType = UM980_MODE_ROVER_AUTOMOTIVE;
+                return;
+            }
+        }
+    }
+    else
+    {
+        // This mode response did not contain ;MODE
+    }
 }
 
 // Cracks a given CONFIG response into settings
