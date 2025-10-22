@@ -622,7 +622,10 @@ long UM980::getPortBaudrate(const char *comName, uint16_t maxWaitMs)
         updateOnce(); // Will call um980ProcessMessage() and configHandler()
 
         if (configStringFound == true)
+        {
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
             return (configLong);
+        }
 
         if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_ERROR)
         {
@@ -759,7 +762,10 @@ float UM980::getElevationAngle(uint16_t maxWaitMs)
         updateOnce(); // Will call um980ProcessMessage() and configHandler()
 
         if (configStringFound == true)
+        {
+            unicoreLibrarySemaphoreBlock = false; // Allow external tasks to control serial hardware
             return (configFloat);
+        }
 
         if (commandResponse == UM980_RESULT_RESPONSE_COMMAND_ERROR)
         {
