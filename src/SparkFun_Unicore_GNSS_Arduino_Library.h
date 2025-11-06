@@ -340,13 +340,13 @@ class UM980
     void configHandler(uint8_t *response, uint16_t length);
     void modeHandler(uint8_t *response, uint16_t length);
 
-    bool initBestnav(uint8_t rate = 1);
+    bool initBestnav(float rate = 1.0);
     UNICORE_BESTNAV_t *packetBESTNAV = nullptr;
 
-    bool initBestnavXyz(uint8_t rate = 1);
+    bool initBestnavXyz(float rate = 1.0);
     UNICORE_BESTNAVXYZ_t *packetBESTNAVXYZ = nullptr;
 
-    bool initRectime(uint8_t rate = 1);
+    bool initRectime(float rate = 1.0);
     UNICORE_RECTIME_t *packetRECTIME = nullptr;
 
     bool initVersion();

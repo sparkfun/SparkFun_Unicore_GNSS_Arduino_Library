@@ -1414,7 +1414,7 @@ bool UM980::initVersion()
 }
 
 // Allocate RAM for packetBESTNAV and initialize it
-bool UM980::initBestnav(uint8_t rate)
+bool UM980::initBestnav(float rate)
 {
     if ((startBinaryBeforeFix == false) && (isNmeaFixed() == false))
     {
@@ -1433,7 +1433,7 @@ bool UM980::initBestnav(uint8_t rate)
 
     // Start outputting BESTNAV in Binary on this COM port
     char command[50];
-    snprintf(command, sizeof(command), "BESTNAVB %d", rate);
+    snprintf(command, sizeof(command), "BESTNAVB %0.2f", rate);
     if (sendCommand(command) == false)
     {
         delete packetBESTNAV;
@@ -1465,7 +1465,7 @@ bool UM980::initBestnav(uint8_t rate)
 }
 
 // Allocate RAM for packetBESTNAVXYZ and initialize it
-bool UM980::initBestnavXyz(uint8_t rate)
+bool UM980::initBestnavXyz(float rate)
 {
     if ((startBinaryBeforeFix == false) && (isNmeaFixed() == false))
     {
@@ -1484,7 +1484,7 @@ bool UM980::initBestnavXyz(uint8_t rate)
 
     // Start outputting BESTNAVXYZ in Binary on this COM port
     char command[50];
-    snprintf(command, sizeof(command), "BESTNAVXYZB %d", rate);
+    snprintf(command, sizeof(command), "BESTNAVXYZB %0.2f", rate);
     if (sendCommand(command) == false)
     {
         delete packetBESTNAVXYZ;
@@ -1516,7 +1516,7 @@ bool UM980::initBestnavXyz(uint8_t rate)
 }
 
 // Allocate RAM for packetRECTIME and initialize it
-bool UM980::initRectime(uint8_t rate)
+bool UM980::initRectime(float rate)
 {
     if ((startBinaryBeforeFix == false) && (isNmeaFixed() == false))
     {
@@ -1537,7 +1537,7 @@ bool UM980::initRectime(uint8_t rate)
 
     // Start outputting RECTIME in Binary on this COM port
     char command[50];
-    snprintf(command, sizeof(command), "RECTIMEB %d", rate);
+    snprintf(command, sizeof(command), "RECTIMEB %0.2f", rate);
     if (sendCommand(command) == false)
     {
         delete packetRECTIME;
