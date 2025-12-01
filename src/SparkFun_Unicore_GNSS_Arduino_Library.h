@@ -98,6 +98,7 @@ typedef enum
 #define offsetBestnavLat ((uint16_t)8)
 #define offsetBestnavLon ((uint16_t)16)
 #define offsetBestnavHgt ((uint16_t)24)
+#define offsetBestnavUndulation ((uint16_t)32)
 #define offsetBestnavLatDeviation ((uint16_t)40)
 #define offsetBestnavLonDeviation ((uint16_t)44)
 #define offsetBestnavHgtDeviation ((uint16_t)48)
@@ -300,6 +301,8 @@ class UM980
     float getEcefXDeviation();
     float getEcefYDeviation();
     float getEcefZDeviation();
+
+    double getGeoidalSeparation();
 
     uint8_t getSIV();
     uint8_t getSatellitesTracked();

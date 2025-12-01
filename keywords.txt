@@ -86,6 +86,7 @@ getEcefZ	KEYWORD2
 getEcefXDeviation	KEYWORD2
 getEcefYDeviation	KEYWORD2
 getEcefZDeviation	KEYWORD2
+getGeoidalSeparation	KEYWORD2
 getSIV	KEYWORD2
 getSatellitesUsed	KEYWORD2
 getSatellitesTracked	KEYWORD2
