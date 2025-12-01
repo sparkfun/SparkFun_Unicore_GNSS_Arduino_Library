@@ -1249,6 +1249,7 @@ void UM980::unicoreHandler(uint8_t *response, uint16_t length)
         memcpy(&packetBESTNAV->data.latitude, &data[offsetBestnavLat], sizeof(double));
         memcpy(&packetBESTNAV->data.longitude, &data[offsetBestnavLon], sizeof(double));
         memcpy(&packetBESTNAV->data.altitude, &data[offsetBestnavHgt], sizeof(double));
+        memcpy(&packetBESTNAV->data.geoidalSeparation, &data[offsetBestnavUndulation], sizeof(float));
         memcpy(&packetBESTNAV->data.horizontalSpeed, &data[offsetBestnavHorSpd], sizeof(double));
         memcpy(&packetBESTNAV->data.verticalSpeed, &data[offsetBestnavVertSpd], sizeof(double));
         memcpy(&packetBESTNAV->data.trackGround, &data[offsetBestnavTrkGnd], sizeof(double));
@@ -1586,6 +1587,11 @@ double UM980::getAltitude()
 {
     CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
     return (packetBESTNAV->data.altitude);
+}
+double UM980::getGeoidalSeparation()
+{
+    CHECK_POINTER_BOOL(packetBESTNAV, initBestnav); // Check that RAM has been allocated
+    return ((double)packetBESTNAV->data.geoidalSeparation);
 }
 double UM980::getHorizontalSpeed()
 {

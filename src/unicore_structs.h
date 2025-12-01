@@ -7,6 +7,7 @@ typedef struct
     double latitude;
     double longitude;
     double altitude;
+    float geoidalSeparation;
     double horizontalSpeed;
     double verticalSpeed;
     double trackGround;
