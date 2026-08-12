@@ -1274,19 +1274,32 @@ void UM980::unicoreHandler(uint8_t *response, uint16_t length)
         uint8_t *data = &response[um980HeaderLength]; // Point at the start of the data fields
 
         // Move data into given containers
+
+        // Strictly, RECTIME clock status is uint32_t. Here we copy the first byte only
         memcpy(&packetRECTIME->data.timeStatus, &data[offsetRectimeClockStatus], sizeof(uint8_t));
+
         memcpy(&packetRECTIME->data.timeOffset, &data[offsetRectimeOffset], sizeof(double));
         memcpy(&packetRECTIME->data.timeDeviation, &data[offsetRectimeOffsetStd], sizeof(double));
-        memcpy(&packetRECTIME->data.year, &data[offsetRectimeUtcYear], sizeof(uint16_t));
+
+        // RECTIME utc year is uint32_t. packetRECTIME->data.year is uint16_t
+        uint32_t tempYr;
+        memcpy(&tempYr, &data[offsetRectimeUtcYear], sizeof(uint32_t));
+        packetRECTIME->data.year = tempYr;
+
         memcpy(&packetRECTIME->data.month, &data[offsetRectimeUtcMonth], sizeof(uint8_t));
         memcpy(&packetRECTIME->data.day, &data[offsetRectimeUtcDay], sizeof(uint8_t));
         memcpy(&packetRECTIME->data.hour, &data[offsetRectimeUtcHour], sizeof(uint8_t));
         memcpy(&packetRECTIME->data.minute, &data[offsetRectimeUtcMinute], sizeof(uint8_t));
 
-        memcpy(&packetRECTIME->data.millisecond, &data[offsetRectimeUtcMillisecond], sizeof(uint32_t));
-        packetRECTIME->data.second = round(packetRECTIME->data.millisecond / 1000.0);
-        packetRECTIME->data.millisecond -= (packetRECTIME->data.second * 1000); // Remove seconds from milliseconds
+        // RECTIME utc ms is uint32_t and can hold 0-60999
+        // packetRECTIME->data.millisecond is uint16_t
+        // We need to be careful with our extraction and conversion
+        uint32_t tempMs; // Replace round with / and %. See issue #19
+        memcpy(&tempMs, &data[offsetRectimeUtcMillisecond], sizeof(uint32_t));
+        packetRECTIME->data.second = tempMs / 1000;
+        packetRECTIME->data.millisecond = tempMs % 1000;
 
+        // Strictly, RECTIME utc status is uint32_t. Here we copy the first byte only
         memcpy(&packetRECTIME->data.dateStatus, &data[offsetRectimeUtcStatus], sizeof(uint8_t));
     }
     else if (messageID == messageIdBestnavXyz)
