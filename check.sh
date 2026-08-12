@@ -120,5 +120,11 @@ make clean
 make
 make clean
 
+# User_Parser_Test
+cd ../Example22_SetAntennaDescription
+make clean
+make
+make clean
+
 # Return to origin directory
 cd ../..

@@ -140,7 +140,11 @@ bool UM980::begin(HardwareSerial &serialPort,
 {
     ptrUM980 = this;
     _hwSerialPort = &serialPort;
-    _debugPort = parserDebug;
+
+    if (!((parserDebug == nullptr) && (_debugPort != nullptr)))
+        // If _debugPort has been configured by enableDebugging
+        // don't overwrite it with nullptr
+        _debugPort = parserDebug;
 
     // Initialize the parser
     size_t bufferLength = sempGetBufferLength(unicoreParserTable, unicoreParserCount, BUFFER_LENGTH);
@@ -219,6 +223,12 @@ bool UM980::update()
 void UM980::enablePrintParserTransitions()
 {
     _printParserTransitions = true;
+}
+
+// Disable the display of parser transitions
+void UM980::disablePrintParserTransitions()
+{
+    _printParserTransitions = false;
 }
 
 // Checks for new data once
@@ -1967,6 +1977,7 @@ void UM980::configHandler(uint8_t *response, uint16_t length)
 // $CONFIG,COM1,CONFIG COM1 115200*23
 // $CONFIG,COM2,CONFIG COM2 115200*23
 // $CONFIG,COM3,CONFIG COM3 115200*23
+// $CONFIG,BASEANTENNAMODEL,CONFIG BASEANTENNAMODEL "ADVNULLANTENNA NULL" "1234" 123 NO*1D
 bool UM980::isConfigurationPresent(const char *stringToFind, uint16_t maxWaitMs)
 {
     Um980Result result;

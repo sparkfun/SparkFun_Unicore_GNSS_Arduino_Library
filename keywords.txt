@@ -18,8 +18,33 @@ isConnected	KEYWORD2
 isBlocking	KEYWORD2
 enableDebugging	KEYWORD2
 disableDebugging	KEYWORD2
+update	KEYWORD2
+updateOnce	KEYWORD2
+
+enableDebugging	KEYWORD2
+disableDebugging	KEYWORD2
+
+enableParserDebug	KEYWORD2
+disableParserDebug	KEYWORD2
+enableParserErrors	KEYWORD2
+disableParserErrors	KEYWORD2
+
+enableBinaryBeforeFix	KEYWORD2
+disableBinaryBeforeFix	KEYWORD2
+
+enablePrintBadChecksums	KEYWORD2
+disablePrintBadChecksums	KEYWORD2
+enablePrintParserTransitions	KEYWORD2
+disablePrintParserTransitions	KEYWORD2
+enablePrintRxMessages	KEYWORD2
+disablePrintRxMessages	KEYWORD2
+enableRxMessageDump	KEYWORD2
+disableRxMessageDump	KEYWORD2
+
+dumpBuffer	KEYWORD2
 
 setMode	KEYWORD2
+getMode	KEYWORD2
 setModeBase	KEYWORD2
 setModeBaseGeodetic	KEYWORD2
 setModeBaseECEF	KEYWORD2
@@ -29,30 +54,31 @@ setModeRoverSurvey	KEYWORD2
 setModeRoverUAV	KEYWORD2
 setModeRoverAutomotive	KEYWORD2
 setModeRoverMow	KEYWORD2
-setPortBaudrate	KEYWORD2
-setBaudrate	KEYWORD2
 
+setPortBaudrate	KEYWORD2
+getPortBaudrate	KEYWORD2
+setBaudrate	KEYWORD2
 enablePPS	KEYWORD2
 disablePPS	KEYWORD2
 configurePPS	KEYWORD2
 
 enableConstellation	KEYWORD2
 disableConstellation	KEYWORD2
-
 setElevationAngle	KEYWORD2
+getElevationAngle	KEYWORD2
 setMinCNO	KEYWORD2
-
 enableFrequency	KEYWORD2
 disableFrequency	KEYWORD2
 enableSystem	KEYWORD2
 disableSystem	KEYWORD2
+
 setNMEAPortMessage	KEYWORD2
 setNMEAMessage	KEYWORD2
 setRTCMPortMessage	KEYWORD2
 setRTCMMessage	KEYWORD2
+
 disableOutput	KEYWORD2
 disableOutputPort	KEYWORD2
-
 factoryReset	KEYWORD2
 reset	KEYWORD2
 saveConfiguration	KEYWORD2
@@ -60,7 +86,6 @@ saveConfiguration	KEYWORD2
 serialAvailable	KEYWORD2
 serialRead	KEYWORD2
 serialPrintln	KEYWORD2
-
 clearBuffer	KEYWORD2
 
 sendCommand	KEYWORD2
@@ -77,23 +102,35 @@ checkCRC	KEYWORD2
 getLatitude	KEYWORD2
 getLongitude	KEYWORD2
 getAltitude	KEYWORD2
+getHorizontalSpeed	KEYWORD2
+getVerticalSpeed	KEYWORD2
+getTrackGround	KEYWORD2
+
 getLatitudeDeviation	KEYWORD2
 getLongitudeDeviation	KEYWORD2
 getAltitudeDeviation	KEYWORD2
+getHorizontalSpeedDeviation	KEYWORD2
+getVerticalSpeedDeviation	KEYWORD2
+
 getEcefX	KEYWORD2
 getEcefY	KEYWORD2
 getEcefZ	KEYWORD2
 getEcefXDeviation	KEYWORD2
 getEcefYDeviation	KEYWORD2
 getEcefZDeviation	KEYWORD2
+
 getGeoidalSeparation	KEYWORD2
+
 getSIV	KEYWORD2
 getSatellitesUsed	KEYWORD2
 getSatellitesTracked	KEYWORD2
 getSolutionStatus	KEYWORD2
 getPositionType	KEYWORD2
+getVelocityType	KEYWORD2
+
 getRTKSolution	KEYWORD2
 getPseudorangeCorrection	KEYWORD2
+
 getYear	KEYWORD2
 getMonth	KEYWORD2
 getDay	KEYWORD2
@@ -105,15 +142,14 @@ getTimeStatus	KEYWORD2
 getDateStatus	KEYWORD2
 getTimeOffset	KEYWORD2
 getTimeOffsetDeviation	KEYWORD2
+
 getFixAgeMilliseconds	KEYWORD2
-getModuleType	KEYWORD2
+
+getModelType	KEYWORD2
 getID	KEYWORD2
 getVersion	KEYWORD2
 getCompileTime	KEYWORD2
 getVersionFull	KEYWORD2
-
-enableBinaryBeforeFix	KEYWORD2
-disableBinaryBeforeFix	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)

@@ -27,6 +27,7 @@
   $CONFIG,COM1,CONFIG COM1 115200*23
   $CONFIG,COM2,CONFIG COM2 115200*23
   $CONFIG,COM3,CONFIG COM3 115200*23
+  $CONFIG,BASEANTENNAMODEL,CONFIG BASEANTENNAMODEL "ADVNULLANTENNA NULL" "1234" 123 NO*1D
 
   These examples are targeted for an ESP32 platform but any platform that has multiple
   serial UARTs should be compatible.
